@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/booking.css">
   <link rel="stylesheet" href="css/office.css">
+  <link rel="stylesheet" href="css/mobile.css">
   <style>
     /* Loading screen: inline so it paints before the stylesheets arrive */
     #boot{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4rem;transition:opacity .45s ease,visibility .45s}
@@ -61,12 +62,14 @@
       <a href="#/home?s=guide"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span>Travel Guide</span></a>
       <a href="#/home?s=about"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.3"/><path d="M17 14c2.5 0 4 2 4 5"/></svg><span>About Us</span></a>
       <a href="#/home?s=contact"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><span>Contact</span></a>
+      <a class="nav-office" href="#/office"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3h18v-3a2 2 0 0 1 0-6V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg><span>Ticket Office</span></a>
     </nav>
     <span class="nav-sep" aria-hidden="true"></span>
     <div class="nav-cta">
       <a class="btn-outline" href="#/office" data-nav="office"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3h18v-3a2 2 0 0 1 0-6V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg><span>Ticket Office</span></a>
       <a class="btn-navy" href="#/book" data-nav="book"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Book Now</span></a>
     </div>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Menu" aria-expanded="false"><span class="bars"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></span><span class="x"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></span></button>
   </header>
 
   <main id="view"></main>
@@ -83,5 +86,16 @@
   <script src="js/admin.js"></script>
   <script src="js/home.js"></script>
   <script src="js/app.js"></script>
+  <script>
+    // Mobile menu: open/close, and close after choosing a link
+    (function () {
+      var bar = document.querySelector('.topbar'), t = document.getElementById('navToggle');
+      function set(o) { bar.classList.toggle('open', o); t.setAttribute('aria-expanded', o); }
+      t.addEventListener('click', function () { set(!bar.classList.contains('open')); });
+      bar.addEventListener('click', function (e) { if (e.target.closest('.nav-links a')) set(false); });
+      window.addEventListener('hashchange', function () { set(false); });
+      document.addEventListener('click', function (e) { if (!e.target.closest('.topbar')) set(false); });
+    })();
+  </script>
 </body>
 </html>

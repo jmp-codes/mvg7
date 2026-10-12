@@ -54,7 +54,8 @@ body.is-book { background: linear-gradient(180deg, #e9f2fb 0, #f4f8fc 320px, #f4
 .bk-route, .bk-pay { display: flex; align-items: center; gap: .8rem; border: 1.5px solid var(--line2); border-radius: 12px; padding: .8rem 1rem; cursor: pointer; background: #fff; }
 .bk-route.on, .bk-pay.on { border-color: var(--navy); background: #f1f6fd; }
 .bk-route.off { opacity: .6; }
-.bk-route input, .bk-pay input { position: absolute; opacity: 0; pointer-events: none; }
+.bk-route, .bk-pay { position: relative; }
+.bk-route input, .bk-pay input { position: absolute; opacity: 0; pointer-events: none; width: 1px; height: 1px; left: 0; top: 0; }
 .bk-radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #a9b6cb; flex: none; }
 .bk-route.on .bk-radio, .bk-pay.on .bk-radio { border: 5px solid var(--navy); }
 .bk-route > div { flex: 1; display: grid; } .bk-route b { color: #0c1f4a; } .bk-route span:not(.bk-radio) { font-size: .82rem; color: #5b6a82; }
