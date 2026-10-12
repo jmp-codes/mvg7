@@ -41,7 +41,7 @@ G7.ticket = (function () {
         <div><small>Booking Reference</small><div class="tk-ref"><b>${esc(b.ref)}</b><button type="button" class="tk-copy no-print" data-copy="${esc(b.ref)}" aria-label="Copy reference">${icon('copy')}</button></div></div>
         <div><small>Booking Status</small>${cancelled ? '<span class="tk-pill bad">' + icon('xcircle') + 'Cancelled</span><em>Seats released.</em>' : '<span class="tk-pill ok">' + icon('checkcircle') + 'Confirmed</span><em>Your seats are reserved.</em>'}</div>
         <div><small>Total Amount</small><div class="tk-total">${icon('ticket')}<b>${u.money(b.total)}</b></div></div>
-        <div><small>Payment Status</small><span class="tk-pill ${paid ? 'ok' : 'warn'}">${icon(paid ? 'checkcircle' : 'clock')}${paid ? 'Paid' : 'Unpaid'}</span><em>${esc(payLabel)}</em></div>
+        <div><small>Payment Status</small><span class="tk-pill ${paid ? 'ok' : b.payment.status === 'refunded' ? 'bad' : 'warn'}">${icon(paid ? 'checkcircle' : b.payment.status === 'refunded' ? 'refresh' : 'clock')}${paid ? 'Paid' : b.payment.status === 'refunded' ? 'Refunded' : 'Unpaid'}</span><em>${esc(payLabel)}</em></div>
       </div>
 
       <section class="tk-card ${cancelled ? 'is-cancelled' : ''}">
@@ -62,13 +62,17 @@ G7.ticket = (function () {
         ${cancelled ? '<div class="stamp">CANCELLED</div>' : ''}
       </section>
     </div>
-    <div class="tk-actions no-print"><button type="button" class="btn-outline" data-print>${icon('print')} Print Ticket(s)</button>${opts.extra || ''}</div>`;
+    <div class="tk-actions no-print"><button type="button" class="btn-outline" data-print>${icon('print')} Print Ticket(s)</button><button type="button" class="btn-outline" data-save="png" data-ref="${esc(b.ref)}">${icon('download')} Save as Image (PNG)</button><button type="button" class="btn-outline" data-save="jpg" data-ref="${esc(b.ref)}">${icon('download')} Save as JPG</button>${opts.extra || ''}</div>`;
   }
 
   // Wires the Print and Copy buttons inside el
   function wirePrint(el) {
     const p = u.$('[data-print]', el);
     if (p) p.addEventListener('click', () => window.print());
+    u.$$('[data-save]', el).forEach(btn => btn.addEventListener('click', () => {
+      const b = store.bookings().find(x => x.ref === btn.dataset.ref);
+      if (b && G7.ticketImg) G7.ticketImg.save(b, btn.dataset.save);
+    }));
     const c = u.$('[data-copy]', el);
     if (c) c.addEventListener('click', () => {
       const ref = c.dataset.copy;

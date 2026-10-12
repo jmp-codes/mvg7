@@ -153,3 +153,8 @@ body.is-book { background: linear-gradient(180deg, #e9f2fb 0, #f4f8fc 320px, #f4
   body.is-book { background: #fff; }
   .tk-summary, .tk-card { box-shadow: none; } .tk-head { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* confirm checkbox: keep box and sentence on one line */
+.bk-agree { display: flex; align-items: flex-start; gap: .6rem; line-height: 1.4; cursor: pointer; }
+.bk-agree input[type="checkbox"] { width: 18px; height: 18px; min-width: 18px; flex: none; margin: .1rem 0 0; padding: 0; accent-color: var(--navy, #0a2f7a); }
+.tk-actions { flex-wrap: wrap; justify-content: center; }

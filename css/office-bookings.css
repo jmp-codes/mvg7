@@ -1,0 +1,79 @@
+/* ============================================================
+ * office-bookings.css - Bookings tab: stat cards, filters,
+ * selectable table and the Booking Details side panel
+ * ============================================================ */
+.ob { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: start; }
+@media (min-width: 1200px) { .ob { grid-template-columns: minmax(0, 1fr) 400px; } }
+.ob-main { min-width: 0; }
+.ob-side { display: none; }
+@media (min-width: 1200px) { .ob-side { display: block; position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto; } }
+
+/* stat cards */
+.ob-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin-bottom: 1rem; }
+.ob-stat { display: flex; align-items: center; gap: .9rem; text-align: left; font: inherit; border: 1.5px solid transparent; border-radius: 14px; padding: 1rem 1.1rem; cursor: pointer; transition: transform .12s, box-shadow .12s; }
+.ob-stat:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(8, 30, 70, .1); }
+.ob-stat.on { border-color: currentColor; box-shadow: 0 0 0 3px rgba(10, 47, 122, .08); }
+.ob-stat .ob-sic { width: 58px; height: 58px; padding: 14px; border-radius: 50%; background: #fff; flex: none; }
+.ob-stat b { display: block; font-size: 1.9rem; line-height: 1; color: #0c1f4a; }
+.ob-stat strong { display: block; font-size: .98rem; margin-top: .25rem; } .ob-stat small { display: block; font-size: .8rem; opacity: .9; margin-top: .1rem; }
+.ob-stat small .up { color: #12803f; } .ob-stat small .down { color: #c0392b; }
+.ob-stat.s1 { background: #eaf3fd; color: #0d5fb8; } .ob-stat.s2 { background: #e6f6ec; color: #12803f; } .ob-stat.s3 { background: #fdf0dc; color: #c2610c; } .ob-stat.s4 { background: #fdeceb; color: #c0392b; }
+
+/* filters */
+.ob-filters { align-items: flex-end; position: relative; }
+.ob-filters label.grow { flex: 1 1 260px; }
+.ob-more { position: relative; } .ob-n { background: #0a2f7a; color: #fff; border-radius: 99px; font-size: .72rem; min-width: 1.2rem; height: 1.2rem; display: inline-grid; place-items: center; padding: 0 .3rem; }
+.ob-extra { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: .9rem 1rem; align-items: flex-end; padding-top: .9rem; border-top: 1px dashed #d6deea; }
+.ob-extra[hidden] { display: none; } .ob-extra label { min-width: 190px; flex: 1 1 190px; }
+
+/* table */
+.ob-tbl th.ck, .ob-tbl td.ck { width: 44px; padding-right: 0; text-align: center; }
+.ob-tbl input[type="checkbox"] { width: 18px; height: 18px; accent-color: #0a2f7a; cursor: pointer; margin: 0; }
+.ob-tbl tbody tr { cursor: pointer; } .ob-tbl tbody tr:hover { background: #f6f9fe; }
+.ob-tbl tbody tr.active { background: #e8f1fd; box-shadow: inset 3px 0 0 #0a4a9a; }
+.ob-tbl .ob-dt { display: block; color: #0c1f4a; } .ob-tbl td small { display: block; color: #5b6a82; }
+.ob-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; padding: .6rem 1.2rem; background: #eef4fd; border-top: 1px solid #dbe6f6; border-bottom: 1px solid #dbe6f6; color: #0a2f7a; }
+
+/* details panel */
+.ob-detail { background: #fff; border-radius: 14px; box-shadow: 0 4px 18px rgba(8, 30, 70, .09); padding: 1.2rem 1.3rem 1.4rem; }
+.ob-modal .ob-detail { box-shadow: none; padding: 0; }
+.ob-empty { text-align: center; padding: 2.4rem 1.4rem; color: #5b6a82; } .ob-empty .ic.big { width: 44px; height: 44px; color: #9fb3d0; margin-bottom: .6rem; } .ob-empty h3 { margin: 0 0 .4rem; color: #0c1f4a; }
+.ob-dh { display: flex; align-items: center; gap: .7rem; margin-bottom: 1rem; } .ob-dh h3 { margin: 0; flex: 1; font-size: 1.05rem; color: #0c1f4a; }
+.ob-dh .of-circ { width: 34px; height: 34px; } .ob-x { background: none; border: 0; cursor: pointer; color: #5b6a82; padding: .2rem; } .ob-x .ic { width: 22px; height: 22px; }
+.ob-ref { display: flex; justify-content: space-between; align-items: center; gap: .6rem; flex-wrap: wrap; } .ob-ref b { font-size: 1.35rem; color: #0a2f7a; letter-spacing: .01em; }
+.ob-when { margin: .5rem 0 0; color: #1d2b44; } .ob-route { margin: .15rem 0 .5rem; color: #1d2b44; font-weight: 600; }
+.ob-sum { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: 1rem 0; padding: .9rem 0; border-top: 1px solid #e8eef7; border-bottom: 1px solid #e8eef7; }
+.ob-sum > div { display: grid; gap: .1rem; align-content: start; min-width: 0; } .ob-sum .ic { width: 20px; height: 20px; color: #0a2f7a; }
+.ob-sum small { color: #6b7a90; font-size: .74rem; } .ob-sum b { color: #0c1f4a; overflow-wrap: anywhere; } .ob-sum b.amt { font-size: 1.1rem; }
+.ob-sum span { font-size: .78rem; color: #5b6a82; display: flex; gap: .25rem; align-items: center; overflow-wrap: anywhere; } .ob-sum span .ic { width: 13px; height: 13px; flex: none; }
+.ob-acts { display: grid; gap: .55rem; margin-bottom: 1.2rem; } .ob-acts .of-btn { width: 100%; padding: .75rem; }
+.of-btn.ob-green { background: #1c9b5a; border-color: #1c9b5a; color: #fff; } .of-btn.ob-green:hover { background: #17874e; }
+.of-btn.ob-purple { background: #6b3fd4; border-color: #6b3fd4; color: #fff; } .of-btn.ob-purple:hover { background: #5a33b8; }
+.ob-h { display: flex; align-items: center; gap: .5rem; margin: 1.2rem 0 .6rem; font-size: .98rem; color: #0c1f4a; } .ob-h .ic { width: 18px; height: 18px; color: #0a2f7a; }
+.ob-pi { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+.ob-pi > div { background: #f5f8fd; border: 1px solid #e3eaf4; border-radius: 12px; padding: .65rem .8rem; } .ob-pi small { display: block; color: #6b7a90; font-size: .72rem; }
+.ob-pi b { display: flex; align-items: center; gap: .3rem; color: #0c1f4a; font-size: .95rem; } .ob-pi b .ic { width: 16px; height: 16px; }
+.ob-pi b.ok { color: #12803f; } .ob-pi b.warn { color: #c2610c; } .ob-pi b.bad { color: #6b3fd4; }
+.ob-none { text-align: center; color: #6b7a90; padding: .6rem 0; margin: 0; }
+.ob-log, .ob-pax { list-style: none; margin: 0; padding: 0; display: grid; gap: .6rem; }
+.ob-log li { display: flex; gap: .7rem; } .ob-log .dot { width: 10px; height: 10px; border-radius: 50%; margin-top: .4rem; flex: none; background: #1c9b5a; } .ob-log .dot.warn { background: #e8a33a; } .ob-log .dot.bad { background: #6b3fd4; }
+.ob-log b { display: block; color: #0c1f4a; font-size: .9rem; } .ob-log small { display: block; color: #6b7a90; font-size: .76rem; }
+.ob-pax li { display: flex; align-items: center; gap: .7rem; background: #f8fafd; border-radius: 10px; padding: .55rem .7rem; } .ob-pax li > span { width: 24px; height: 24px; border-radius: 50%; background: #dbe8fb; color: #0a2f7a; font-size: .78rem; font-weight: 700; display: grid; place-items: center; flex: none; }
+.ob-pax li > div { flex: 1; min-width: 0; } .ob-pax b { display: block; font-size: .9rem; color: #0c1f4a; overflow-wrap: anywhere; } .ob-pax small { color: #6b7a90; font-size: .76rem; } .ob-pax em { font-style: normal; font-weight: 600; font-size: .85rem; }
+.ob-edit .ob-pe { background: #f8fafd; border: 1px solid #e3eaf4; border-radius: 12px; padding: .7rem .9rem .5rem; margin-bottom: .7rem; } .ob-edit .ob-pe > b { display: block; margin-bottom: .4rem; color: #0a2f7a; font-size: .88rem; }
+.ob-edit .ob-h:first-of-type { margin-top: .4rem; }
+
+@media (max-width: 1100px) { .ob-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .ob-stats { grid-template-columns: 1fr; } .ob-stat { padding: .8rem .9rem; } .ob-sum, .ob-pi { grid-template-columns: 1fr; } .ob-extra label { flex: 1 1 100%; } }
+@media (max-width: 860px) { .ob-tbl { min-width: 760px; } }
+
+/* polish: keep table cells on one line */
+.ob-tbl td { white-space: nowrap; }
+.ob-tbl td .chip, .ob-tbl td .vessel, .ob-tbl td [class*="vessel"] { white-space: nowrap; }
+.ob-tbl td:nth-child(3) { min-width: 190px; }
+.ob-tbl td:nth-child(2) a, .ob-tbl td:nth-child(2) .ob-ref { white-space: nowrap; }
+.ob-filters { flex-wrap: wrap; }
+.ob-filters .navy, .ob-filters #newb { white-space: nowrap; flex: none; }
+.ob-stat s, .ob-stat small { white-space: normal; }
+.ob-tbl td:nth-child(3) .of-chip { display: none; }
+.ob-tbl td:nth-child(3) { min-width: 0; }

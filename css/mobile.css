@@ -4,7 +4,7 @@
  * ============================================================ */
 
 /* ---------- Public header: hamburger menu ---------- */
-.nav-toggle, .nav-office { display: none; }
+.nav-toggle, .nav-links a.nav-office { display: none; }
 .topbar { overflow: visible; }
 
 @media (max-width: 860px) {
@@ -19,7 +19,7 @@
   .topbar.open .nav-links { display: flex; flex-direction: column; gap: .15rem; position: absolute; top: calc(100% + 6px); left: 10px; right: 10px; background: #fff; border-radius: 16px; padding: .5rem; box-shadow: 0 14px 40px rgba(8, 30, 70, .25); margin: 0; z-index: 40; }
   .topbar.open .nav-links a { padding: .85rem 1rem; font-size: 1rem; }
   .topbar.open .nav-links a span { display: inline; }
-  .topbar.open .nav-office { display: inline-flex; border-top: 1px solid #e6ecf5; border-radius: 0 0 12px 12px; margin-top: .25rem; }
+  .topbar.open .nav-links a.nav-office { display: inline-flex; border-top: 1px solid #e6ecf5; border-radius: 0 0 12px 12px; margin-top: .25rem; }
 }
 @media (max-width: 520px) {
   .nav-cta .btn-outline { display: none; }
@@ -182,4 +182,15 @@ body .topbar, body.is-home .topbar { overflow: visible; }
   .sm-grid, .sm-section, .of-ssec > div { min-width: 0; max-width: 100%; }
   .of-seatmodal .seat, .seat { min-height: 32px; font-size: .72rem; }
   .of-ssec { overflow-x: visible; }
+}
+
+/* payments / staff on phones */
+@media (max-width: 860px) {
+  .os-acct-btn .who { display: none; }
+  .pay-tiles { grid-template-columns: 1fr 1fr !important; }
+}
+@media (max-width: 560px) { .pay-tiles { grid-template-columns: 1fr !important; } .pay-acts .of-btn { flex: 1 1 100%; } }
+@media (max-width: 860px) {
+  .staff-tbl { min-width: 0 !important; } .staff-tbl th:nth-child(2), .staff-tbl td:nth-child(2) { display: none; }
+  .staff-tbl .rl { display: block; } .staff-tbl td, .staff-tbl th { white-space: normal; } .staff-tbl .acts { display: flex; flex-wrap: wrap; gap: .4rem; }
 }

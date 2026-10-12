@@ -20,6 +20,12 @@ python3 -m http.server 8000     # then visit http://localhost:8000
 | `css/home.css` | Site header + landing page styling |
 | `css/booking.css` | Booking wizard, seat plan extras (aisle, labels) and ticket/confirmation styling |
 | `js/icons.js` | Shared SVG icon set (`G7.icon('name')`) |
+| `js/payments.js` | Payment rules: receive, void, refund, ledger and daily totals (no DOM) |
+| `js/auth.js` | Staff accounts, sign-in session, roles (administrator / cashier) |
+| `js/office-pay.js` | Ticket Office screens for payments, receipts, refunds, Payments tab, Staff tab |
+| `js/ticketimg.js` | Saves the booking confirmation, official receipt and refund voucher as PNG/JPG |
+| `js/logo-data.js` | Small inline copy of the logo (needed for saving images from file://) |
+| `css/mobile.css` | Phone / small-screen fixes (loaded last) |
 | `js/config.js` | Routes, default fares, seat layout (from your 4 deck images), PIN, out-of-service seats |
 | `js/utils.js` | Formatting, toast, modal, CSV download |
 | `js/storage.js` | **All persistence** (localStorage). Swap this file for a backend. |
@@ -51,7 +57,7 @@ Logo: `assets/logo.png` (transparent PNG, header) and `assets/logo-white.png` (l
 - Infants are lap passengers (no seat) and need an adult in the same booking
 - Booking closes 60 minutes before departure (`bookingCutoffMinutes`)
 - Seats are re-checked at confirmation so double-booking is prevented
-- Ticket Office (PIN `1234` by default): sales dashboard, search/cancel/mark paid,
+- Ticket Office (default sign-in: **Administrator**, PIN `1234`; add staff in the Staff tab): sales dashboard, search, receive payment (cash with change / GCash / bank reference), receipts, void, cancel & refund,
   printable manifest with boarding checkboxes, cancel trip / change time / block seats,
   CSV + JSON export, sample data loader
 
@@ -90,3 +96,13 @@ Click seats to select them (blue), then **Save Changes**.
 - Assumptions to confirm: infants sit on laps, child/infant age rules, 60-minute booking
   cutoff, and the 07:00 / 10:00 departure times (taken from your screenshot, which says
   schedules vary by day and weather; use Trips & Seats to change a single day).
+
+## Payments, receipts and staff
+- **Receive payment** (Bookings -> row menu): pick Cash / GCash / Bank. Cash shows the change to give; GCash and bank need a reference number. A receipt number `R-YYMMDD-0001` is issued and the receipt can be printed or saved as PNG/JPG.
+- **Void payment** puts a booking back to Unpaid (reason required). **Cancel & refund** returns full or partial money (reason required, refund number `RF-...`, voucher can be printed/saved). A cancelled-but-paid booking can still be refunded later from its menu.
+- Everything is stamped with the signed-in staff member and kept in `booking.payment.log`. The **Payments** tab shows net sales, cash in the drawer, GCash/bank totals, a per-staff cash-to-hand-in table, all transactions for a date, CSV export and a printable report. Dashboard "Total Sales" = money actually received (net of refunds) that day.
+- **Roles**: Administrator (everything) and Cashier (no Fares, Staff or Data Management). Staff and PINs live in this browser (localStorage) - not real security. "Erase All Data" keeps staff accounts.
+- Cancelling a *trip* does not cancel its bookings automatically; cancel & refund each booking.
+
+## Bookings page (Ticket Office)
+`js/office-bookings.js` + `css/office-bookings.css`: stat cards (click to filter), search, date/status/"More filters" (route, payment method, departure), selectable table with bulk "Export selected (CSV)", row menu, and a Booking Details panel (side panel on wide screens, modal on narrow). Edit Booking changes contact and passenger details only (not seats or fares).

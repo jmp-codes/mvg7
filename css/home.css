@@ -242,3 +242,4 @@ body.is-home .topbar { position: absolute; }
 .topbar { min-height: 92px; }
 .logo-slot.has-logo .logo-img { max-width: 190px; }
 @media (max-width: 860px) { .brand.has-logo .logo-img { height: 54px; } }
+.logo-slot.has-logo .logo-img { filter: drop-shadow(0 4px 14px rgba(0, 0, 0, .35)); }

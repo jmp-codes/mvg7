@@ -87,13 +87,32 @@ G7.store = (function () {
   function fareOrder() { return G7.config.fareOrder.concat(customFares().map(f => f.id)); }
   function setFarePrices(map) { set('farePrices', map); }
 
-  // ---- Maintenance --------------------------------------------------
-  function exportAll() {
-    return { exportedAt: new Date().toISOString(), bookings: bookings(), trips: tripOverrides(), extraTrips: extraTrips(), customFares: customFares(), maintenance: maintenanceSeats(), farePrices: get('farePrices', {}) };
+  // ---- Staff accounts (Ticket Office). Until staff are edited, one default admin uses config.adminPin ----
+  function staff() {
+    const v = get('staff', null);
+    if (Array.isArray(v) && v.length) return v;
+    return [{ id: 'admin', name: 'Administrator', pin: G7.config.adminPin, role: 'admin', active: true }];
   }
-  function resetAll() {
-    ['bookings', 'trips', 'extraTrips', 'farePrices', 'customFares', 'maintenance'].forEach(k => localStorage.removeItem(PREFIX + k));
+  function saveStaff(list) { set('staff', list); }
+
+  // ---- Receipt numbers: R-YYMMDD-0001, restarting each day ----
+  function nextReceiptNo(prefix) {
+    const d = new Date(), key = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+    const seq = get('receiptSeq', {});
+    const n = (seq[prefix] && seq[prefix].day === key ? seq[prefix].n : 0) + 1;
+    seq[prefix] = { day: key, n };
+    set('receiptSeq', seq);
+    const p2 = x => String(x).padStart(2, '0');
+    return prefix + '-' + String(d.getFullYear()).slice(2) + p2(d.getMonth() + 1) + p2(d.getDate()) + '-' + String(n).padStart(4, '0');
   }
 
-  return { bookings, saveBookings, getBooking, addBooking, updateBooking, tripOverride, tripOverrides, setTripOverride, maintenanceSeats, setMaintenanceSeats, extraTrips, addExtraTrip, removeExtraTrip, fares, fareOrder, customFares, saveCustomFares, setFarePrices, exportAll, resetAll };
+  // ---- Maintenance --------------------------------------------------
+  function exportAll() {
+    return { exportedAt: new Date().toISOString(), bookings: bookings(), trips: tripOverrides(), extraTrips: extraTrips(), customFares: customFares(), maintenance: maintenanceSeats(), farePrices: get('farePrices', {}), staff: staff().map(x => ({ id: x.id, name: x.name, role: x.role, active: x.active !== false })) };
+  }
+  function resetAll() {
+    ['bookings', 'trips', 'extraTrips', 'farePrices', 'customFares', 'maintenance', 'receiptSeq'].forEach(k => localStorage.removeItem(PREFIX + k));
+  }
+
+  return { staff, saveStaff, nextReceiptNo, bookings, saveBookings, getBooking, addBooking, updateBooking, tripOverride, tripOverrides, setTripOverride, maintenanceSeats, setMaintenanceSeats, extraTrips, addExtraTrip, removeExtraTrip, fares, fareOrder, customFares, saveCustomFares, setFarePrices, exportAll, resetAll };
 })();

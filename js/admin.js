@@ -5,17 +5,21 @@
 window.G7 = window.G7 || {};
 
 (function () {
-  const { u, config, trips, store, seatmap, ticket, icon } = G7;
+  const { u, config, trips, store, seatmap, ticket, icon, pay, auth } = G7;
   const { esc, $, $$ } = u;
 
+  // [key, label, icon, adminOnly]
   const TABS = [
     ['dashboard', 'Dashboard', 'home'],
     ['bookings', 'Bookings', 'calendar'],
+    ['payments', 'Payments', 'coins'],
     ['manifest', 'Manifest', 'people'],
     ['trips', 'Trips & Seats', 'ship'],
-    ['fares', 'Fares', 'tag'],
-    ['data', 'Data Management', 'database'],
+    ['fares', 'Fares', 'tag', true],
+    ['staff', 'Staff', 'user', true],
+    ['data', 'Data Management', 'database', true],
   ];
+  const tabsFor = () => TABS.filter(t => !t[3] || G7.auth.isAdmin());
 
   let root = null;
   let tab = 'dashboard';
@@ -25,7 +29,7 @@ window.G7 = window.G7 || {};
     mtrip: '', tsort: 'asc', mpage: 1, msort: { key: 'seat', dir: 1 }, tdate: '', troute: 'all', tstatus: 'all', tq: '', tpage: 1, mq: '',
   };
 
-  const authed = () => sessionStorage.getItem('g7.admin') === '1';
+  const authed = () => !!auth.me();
 
   function render(container) {
     root = container;
@@ -34,18 +38,21 @@ window.G7 = window.G7 || {};
 
   function login() {
     document.body.classList.remove('is-office-app');
+    const staff = auth.active();
     root.innerHTML = `<div class="of-login"><div class="of-login-card">
-      <header><div><h2>Ticket Office</h2><p>Staff only. Enter the office PIN to continue.</p></div><span class="of-login-ic">${icon('ticket')}</span></header>
-      <form id="login"><label>PIN
-        <div class="of-input">${icon('lock')}<input type="password" id="pin" placeholder="Enter office PIN" autocomplete="off" required></div></label>
+      <header><div><h2>Ticket Office</h2><p>Staff only. Choose your name and enter your PIN.</p></div><span class="of-login-ic">${icon('ticket')}</span></header>
+      <form id="login"><label>Staff
+        <div class="of-input">${icon('user')}<select id="who">${staff.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div></label>
+        <label>PIN
+        <div class="of-input">${icon('lock')}<input type="password" id="pin" placeholder="Enter your PIN" autocomplete="off" inputmode="numeric" required></div></label>
         <button class="of-btn teal">${icon('login')} Sign in</button></form>
       <div class="of-divider">${icon('shield')}</div>
       <div class="of-info">${icon('info')}<p>This area is restricted to authorized ticket office staff only. Please keep your PIN confidential.</p></div>
     </div></div>`;
     $('#login', root).addEventListener('submit', e => {
       e.preventDefault();
-      if ($('#pin').value === config.adminPin) { sessionStorage.setItem('g7.admin', '1'); draw(); }
-      else u.toast('Wrong PIN.', 'err');
+      if (auth.login($('#who').value, $('#pin').value)) { tab = 'dashboard'; draw(); }
+      else { u.toast('Wrong PIN.', 'err'); $('#pin').value = ''; $('#pin').focus(); }
     });
   }
 
@@ -58,9 +65,9 @@ window.G7 = window.G7 || {};
     document.body.classList.add('is-office-app'); // sidebar layout replaces the public header
     root.innerHTML = `<div class="os">
       <aside class="os-side no-print">${BRAND}<div class="os-label">TICKET OFFICE</div>
-        <nav>${TABS.map(([k, t, ic]) => `<button class="os-link ${k === tab ? 'on' : ''}" data-tab="${k}">${icon(ic)}${t}</button>`).join('')}</nav>
-        <div class="os-foot"><div class="os-acct"><div class="os-menu" id="acct-menu" hidden><a href="#/home">${icon('home')} Back to website</a></div>
-          <button class="os-acct-btn" id="acct" aria-haspopup="true"><span class="of-avatar">${icon('user')}</span>Staff Account <span class="sp"></span>${icon('chevdown')}</button></div>
+        <nav>${tabsFor().map(([k, t, ic]) => `<button class="os-link ${k === tab ? 'on' : ''}" data-tab="${k}">${icon(ic)}${t}</button>`).join('')}</nav>
+        <div class="os-foot"><div class="os-acct"><div class="os-menu" id="acct-menu" hidden><a href="#" id="chpin">${icon('lock')} Change my PIN</a><a href="#/home">${icon('home')} Back to website</a></div>
+          <button class="os-acct-btn" id="acct" aria-haspopup="true"><span class="of-avatar">${icon('user')}</span><span class="who"><b>${esc(auth.me().name)}</b><small>${auth.me().role === 'admin' ? 'Administrator' : 'Cashier'}</small></span> <span class="sp"></span>${icon('chevdown')}</button></div>
           <button class="os-signout" id="logout">${icon('logout')} Sign out</button></div></aside>
       <div class="os-main"><div class="of os-body" id="tab-body"></div></div></div>`;
     $$('[data-tab]', root).forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; draw(); }));
@@ -70,8 +77,11 @@ window.G7 = window.G7 || {};
       if (!m) return document.removeEventListener('click', close);
       if (!e.target.closest || !e.target.closest('.os-acct')) m.hidden = true;
     });
-    $('#logout', root).addEventListener('click', () => { sessionStorage.removeItem('g7.admin'); login(); });
-    ({ dashboard, bookings, manifest, trips: tripsTab, fares, data })[tab]($('#tab-body', root));
+    $('#chpin', root).addEventListener('click', e => { e.preventDefault(); $('#acct-menu', root).hidden = true; G7.officePay.pinModal(); });
+    $('#logout', root).addEventListener('click', () => { auth.logout(); login(); });
+    if (!tabsFor().some(t => t[0] === tab)) tab = 'dashboard';
+    const ctx = { head, F, pager, openPop, bindPopClose, payPill, dateInput };
+    ({ dashboard, bookings: el => G7.officeBookings.render(el, ctx), manifest, trips: tripsTab, fares, data, payments: el => G7.officePay.paymentsTab(el, ctx), staff: el => G7.officePay.staffTab(el, ctx) })[tab]($('#tab-body', root));
   }
 
   // ---- shared bits --------------------------------------------------------
@@ -79,6 +89,11 @@ window.G7 = window.G7 || {};
   const tripLabel = t => trips.routeLabel(t.route) + ' (' + u.fmtTime(t.departs) + ')';
   const confirmedFor = tid => store.bookings().filter(b => b.tripId === tid && b.status === 'confirmed');
   const paxCount = list => list.reduce((n, b) => n + b.passengers.length, 0);
+  const payPill = (b, cls) => {
+    const st = b.payment.status;
+    if (cls === 'od') return st === 'paid' ? '<span class="od-pill ok">Paid</span>' : st === 'refunded' ? '<span class="od-pill bad">Refunded</span>' : '<span class="od-pill warn">Unpaid</span>';
+    return st === 'paid' ? `<span class="of-pill ok">${icon('checkcircle')}Paid</span>` : st === 'refunded' ? `<span class="of-pill bad">${icon('refresh')}Refunded</span>` : `<span class="of-pill warn">${icon('clock')}Unpaid</span>`;
+  };
   const todayPill = () => `<div class="od-date static">${icon('calendarcheck')}<div><b>Today</b><small>${u.fmtDate(u.today())}</small></div></div>`;
   const head = (ic, title, sub, right) => `<header class="od-head op"><div class="op-t">${icon(ic, 'op-ic')}<div><h2>${title}</h2><p>${sub}</p></div></div><div class="op-r">${todayPill()}${right || ''}</div></header>`;
   let popBound = false; // one global listener closes any open row menu
@@ -115,7 +130,7 @@ window.G7 = window.G7 || {};
     const ts = trips.forDate(date);
     const list = [];
     ts.forEach(t => confirmedFor(t.id).forEach(b => list.push(b)));
-    return { trips: ts, bookings: list.length, pax: paxCount(list), sales: list.reduce((n, b) => n + b.total, 0) };
+    return { trips: ts, bookings: list.length, pax: paxCount(list), sales: pay.totals(date).net };
   };
   function delta(now, before, money) {
     const d = now - before;
@@ -148,7 +163,7 @@ window.G7 = window.G7 || {};
         <div class="od-card"><header>${icon('doc', 'od-ic')}<div class="ttl"><h3>Recent Bookings</h3><p>Latest passenger reservations.</p></div><button class="od-all" id="all-bk">View All ${icon('chevright')}</button></header>
           ${recent.length ? `<div class="of-scroll"><table class="od-tbl"><thead><tr><th>Ref</th><th>Trip</th><th>Pax</th><th>Total</th><th>Status</th><th>Payment</th></tr></thead><tbody>
           ${recent.map(b => { const t = trips.byId(b.tripId) || trips.get(b.date, b.routeId); return `<tr><td><a href="#" class="od-ref" data-ref="${esc(b.ref)}">${esc(b.ref)}</a></td><td>${esc(config.ports[t.route.from].name.replace(' Port', ''))} → ${esc(config.ports[t.route.to].name.replace(' Port', ''))}<small>${u.fmtDate(b.date)} · ${u.fmtTime(t.departs)}</small></td><td>${b.passengers.length}</td><td>${u.money(b.total)}</td>
-            <td>${b.status === 'cancelled' ? '<span class="od-pill bad">Cancelled</span>' : '<span class="od-pill ok">Confirmed</span>'}</td><td>${b.payment.status === 'paid' ? '<span class="od-pill ok">Paid</span>' : '<span class="od-pill warn">Unpaid</span>'}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="of-empty">No bookings yet.</p>'}</div>
+            <td>${b.status === 'cancelled' ? '<span class="od-pill bad">Cancelled</span>' : '<span class="od-pill ok">Confirmed</span>'}</td><td>${payPill(b, 'od')}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="of-empty">No bookings yet.</p>'}</div>
       </section>`;
 
     $('#d', el).addEventListener('change', e => { F.date = e.target.value || u.today(); dashboard(el); });
@@ -157,96 +172,6 @@ window.G7 = window.G7 || {};
     $$('[data-seats]', el).forEach(b => b.addEventListener('click', () => openTrip(b.dataset.seats, true, () => dashboard(el))));
     $$('[data-manage]', el).forEach(b => b.addEventListener('click', () => openTrip(b.dataset.manage, false, () => dashboard(el))));
     $$('[data-ref]', el).forEach(a => a.addEventListener('click', e => { e.preventDefault(); ticket.show(store.getBooking(a.dataset.ref)); }));
-  }
-
-  // ---- bookings ----------------------------------------------------------
-  const SORTS = {
-    ref: b => b.ref, trip: b => b.date + b.departs, contact: b => b.contact.name.toLowerCase(), pax: b => b.passengers.length,
-    seats: b => Math.min.apply(null, b.passengers.map(p => p.seat || 999)), total: b => b.total,
-    payment: b => b.payment.status, status: b => b.status, created: b => b.createdAt,
-  };
-
-  function bookings(el) {
-    bindPopClose();
-    el.innerHTML = `${head('calendar', 'Bookings', 'Manage and monitor all booking records.')}
-      <div class="of-filters">
-        <label>Search<div class="of-input">${icon('search')}<input id="q" value="${esc(F.q)}" placeholder="Reference no., name or phone..."></div></label>
-        <label>Travel date${dateInput('fd', F.fdate)}</label>
-        <label>Status<div class="of-input"><select id="st">${[['all', 'All'], ['confirmed', 'Confirmed'], ['cancelled', 'Cancelled'], ['unpaid', 'Unpaid']].map(([v, t]) => `<option value="${v}" ${F.status === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div></label>
-        <button class="of-btn ghost" id="clr">${icon('filter')} Clear</button><span class="sp"></span>
-        <button class="of-btn navy" id="newb">${icon('plus')} New Booking</button></div>
-      <div class="of-panel" id="list"></div>`;
-    const bind = (id, key, ev) => $(id, el).addEventListener(ev || 'input', e => { F[key] = e.target.value; F.page = 1; list(); });
-    bind('#q', 'q'); bind('#fd', 'fdate', 'change'); bind('#st', 'status', 'change');
-    $('#clr', el).addEventListener('click', () => { F.q = ''; F.fdate = ''; F.status = 'all'; F.page = 1; bookings(el); });
-    $('#newb', el).addEventListener('click', () => { G7.booking.prefill({}); location.hash = '#/book'; });
-
-    function list() {
-      const q = F.q.trim().toLowerCase();
-      const rows = store.bookings().filter(b => {
-        if (F.fdate && b.date !== F.fdate) return false;
-        if (F.status === 'confirmed' && b.status !== 'confirmed') return false;
-        if (F.status === 'cancelled' && b.status !== 'cancelled') return false;
-        if (F.status === 'unpaid' && !(b.status === 'confirmed' && b.payment.status !== 'paid')) return false;
-        if (!q) return true;
-        return [b.ref, b.contact.name, b.contact.phone].concat(b.passengers.map(p => p.name)).join(' ').toLowerCase().includes(q);
-      });
-      const kf = SORTS[F.sort.key] || SORTS.created;
-      rows.sort((a, b) => (kf(a) > kf(b) ? 1 : kf(a) < kf(b) ? -1 : 0) * F.sort.dir);
-      const pages = Math.max(1, Math.ceil(rows.length / F.size));
-      if (F.page > pages) F.page = pages;
-      const view = rows.slice((F.page - 1) * F.size, F.page * F.size);
-      const th = (k, t) => `<th data-sort="${k}">${t}<span class="srt ${F.sort.key === k ? 'on' : ''}">${icon('sort')}</span></th>`;
-
-      $('#list', el).innerHTML = `<div class="of-listbar"><div class="of-lt">${icon('doc', 'of-lt-ic')}<b>${rows.length} booking(s) found</b></div>
-        <label class="inl">Show <div class="of-input sm"><select id="size">${[10, 25, 50].map(n => `<option ${F.size === n ? 'selected' : ''}>${n}</option>`).join('')}</select></div> entries</label></div>
-        ${view.length ? `<div class="of-scroll"><table class="of-tbl"><thead><tr>${th('ref', 'Ref')}${th('trip', 'Trip')}${th('contact', 'Contact')}${th('pax', 'Pax')}${th('seats', 'Seats')}${th('total', 'Total')}${th('payment', 'Payment')}${th('status', 'Status')}<th>Actions</th></tr></thead><tbody>
-        ${view.map(b => { const t = trips.byId(b.tripId) || trips.get(b.date, b.routeId); return `<tr class="${b.status === 'cancelled' ? 'dim' : ''}">
-          <td><a href="#" class="of-ref" data-act="view" data-ref="${esc(b.ref)}">${esc(b.ref)}</a></td>
-          <td>${u.fmtDate(b.date)}<small>${esc(trips.routeLabel(t.route))} · ${u.fmtTime(t.departs)}</small><span class="of-chip">${icon('ship')} ${esc(config.vessel)}</span></td>
-          <td>${esc(b.contact.name)}<small class="ph">${icon('phone')} ${esc(b.contact.phone)}</small></td>
-          <td>${b.passengers.length}</td>
-          <td>${esc(b.passengers.map(p => p.seat).filter(Boolean).join(', ') || '—')}</td>
-          <td><b>${u.money(b.total)}</b></td>
-          <td>${b.payment.status === 'paid' ? `<span class="of-pill ok">${icon('checkcircle')}Paid</span>` : `<span class="of-pill warn">${icon('clock')}Unpaid</span>`}</td>
-          <td>${b.status === 'cancelled' ? `<span class="of-pill bad">${icon('xcircle')}Cancelled</span>` : `<span class="of-pill ok">${icon('checkcircle')}Confirmed</span>`}</td>
-          <td class="acts"><button class="of-btn outline" data-act="view" data-ref="${esc(b.ref)}">${icon('ticket')} Tickets</button>
-            ${b.status === 'confirmed' ? `<button class="of-kebab" data-kebab="${esc(b.ref)}" aria-label="More actions">${icon('dots')}</button>` : ''}</td></tr>`; }).join('')}
-        </tbody></table></div>` : '<p class="of-empty">No bookings match.</p>'}
-        ${pager(rows.length, F.page, F.size, 'entries')}`;
-    }
-    list();
-
-    $('#list', el).addEventListener('change', e => { if (e.target.id === 'size') { F.size = Number(e.target.value); F.page = 1; list(); } });
-    $('#list', el).addEventListener('click', e => {
-      const pg = e.target.closest('[data-pg]');
-      if (pg) { F.page = Number(pg.dataset.pg); return list(); }
-      const sh = e.target.closest('[data-sort]');
-      if (sh) { const k = sh.dataset.sort; F.sort = { key: k, dir: F.sort.key === k ? -F.sort.dir : 1 }; return list(); }
-      const kb = e.target.closest('[data-kebab]');
-      if (kb) {
-        const ref = kb.dataset.kebab, b = store.getBooking(ref);
-        const had = kb.parentNode.querySelector('.of-pop');
-        if (had) return had.remove();
-        const items = [];
-        if (b.payment.status !== 'paid') items.push({ act: 'pay', label: 'Mark paid', icon: 'check' });
-        items.push({ act: 'cancel', label: 'Cancel booking', icon: 'trash', danger: true });
-        return openPop(kb.parentNode, ref, items);
-      }
-      const btn = e.target.closest('[data-act]');
-      if (!btn) return;
-      if (e.preventDefault) e.preventDefault();
-      const ref = btn.dataset.ref;
-      $$('.of-pop').forEach(x => x.remove());
-      if (btn.dataset.act === 'view') ticket.show(store.getBooking(ref));
-      if (btn.dataset.act === 'pay') { store.updateBooking(ref, b => (b.payment.status = 'paid')); u.toast('Marked as paid.', 'ok'); list(); }
-      if (btn.dataset.act === 'cancel') {
-        if (!confirm('Cancel booking ' + ref + '? Its seats will be released.')) return;
-        store.updateBooking(ref, b => { b.status = 'cancelled'; b.cancelledAt = new Date().toISOString(); });
-        u.toast('Booking cancelled.', 'ok');
-        list();
-      }
-    });
   }
 
   // ---- manifest ----------------------------------------------------------
@@ -715,11 +640,11 @@ window.G7 = window.G7 || {};
 
     $('#refresh', el).addEventListener('click', () => data(el));
     $('#csv', el).addEventListener('click', () => {
-      const headRow = ['Ref', 'Date', 'Route', 'Departs', 'Passenger', 'Fare type', 'Seat', 'Amount', 'Contact', 'Phone', 'Payment', 'Status', 'Boarded'];
+      const headRow = ['Ref', 'Date', 'Route', 'Departs', 'Passenger', 'Fare type', 'Seat', 'Amount', 'Contact', 'Phone', 'Payment', 'Payment method', 'Receipt no', 'Received by', 'Refunded', 'Status', 'Boarded'];
       const lines = [headRow.join(',')];
       store.bookings().forEach(b => b.passengers.forEach(p => lines.push([
         b.ref, b.date, trips.routeLabel(trips.route(b.routeId)), (trips.byId(b.tripId) || trips.get(b.date, b.routeId)).departs, p.name, p.fareLabel || p.fareType, p.seat || '', p.fare,
-        b.contact.name, b.contact.phone, b.payment.status, b.status, p.boarded ? 'yes' : 'no',
+        b.contact.name, b.contact.phone, b.payment.status, b.payment.method, b.payment.receiptNo || '', b.payment.receivedByName || '', b.payment.refund ? b.payment.refund.amount : '', b.status, p.boarded ? 'yes' : 'no',
       ].map(u.csvCell).join(','))));
       u.download('g7-bookings.csv', lines.join('\n'), 'text/csv');
     });
@@ -748,12 +673,14 @@ window.G7 = window.G7 || {};
           pax.push({ fareType: ft, fare: fares[ft].price, seat: Number(free.splice(Math.floor(Math.random() * free.length), 1)[0]), name: names[Math.floor(Math.random() * names.length)], age: ft === 'child' ? 8 : '', boarded: false });
         }
         const ref = u.newRef(date);
-        store.addBooking({
+        const bk = {
           ref, tripId: t.id, date, routeId: r.id, createdAt: new Date().toISOString(),
           contact: { name: pax[0].name, phone: '09' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0'), email: '' },
           passengers: pax, total: pax.reduce((s, p) => s + p.fare, 0),
-          payment: { method: 'cash', status: Math.random() > 0.5 ? 'paid' : 'unpaid' }, status: 'confirmed',
-        });
+          payment: { method: 'cash', status: 'unpaid' }, status: 'confirmed',
+        };
+        if (Math.random() > 0.5) pay.seedPaid(bk, (auth.me() || {}).name || 'Sample');
+        store.addBooking(bk);
         made++;
       }
     }));
