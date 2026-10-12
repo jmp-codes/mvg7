@@ -22,7 +22,7 @@ window.G7 = window.G7 || {};
   const F = {
     date: u.today(), routeId: config.routes[0].id,
     q: '', fdate: '', status: 'all', page: 1, size: 10, sort: { key: 'created', dir: -1 },
-    tdate: '', troute: 'all', tstatus: 'all', tq: '', tpage: 1, mq: '',
+    mtrip: '', tdate: '', troute: 'all', tstatus: 'all', tq: '', tpage: 1, mq: '',
   };
 
   const authed = () => sessionStorage.getItem('g7.admin') === '1';
@@ -61,6 +61,7 @@ window.G7 = window.G7 || {};
 
   // ---- shared bits --------------------------------------------------------
   const routeOptions = (sel, withTime) => config.routes.map(r => `<option value="${r.id}" ${r.id === sel ? 'selected' : ''}>${esc(trips.routeLabel(r))}${withTime ? ' (' + u.fmtTime(trips.get(F.date, r.id).departs) + ')' : ''}</option>`).join('');
+  const tripLabel = t => trips.routeLabel(t.route) + ' (' + u.fmtTime(t.departs) + ')';
   const confirmedFor = tid => store.bookings().filter(b => b.tripId === tid && b.status === 'confirmed');
   const paxCount = list => list.reduce((n, b) => n + b.passengers.length, 0);
   const head = (ic, title, sub, right) => `<header class="of-head">${icon(ic, 'of-head-ic')}<div><h2>${title}</h2><p>${sub}</p></div>${right ? `<div class="of-head-r">${right}</div>` : ''}</header>`;
@@ -87,8 +88,8 @@ window.G7 = window.G7 || {};
     $('#refresh', el).addEventListener('click', () => dashboard(el));
 
     let rev = 0, paid = 0, pax = 0;
-    const cards = config.routes.map((r, idx) => {
-      const t = trips.get(F.date, r.id);
+    const cards = trips.forDate(F.date).map((t, idx) => {
+      const r = t.route;
       const list = confirmedFor(t.id);
       const cap = trips.sellableCount(t);
       const sold = cap - trips.availableCount(t);
@@ -96,8 +97,9 @@ window.G7 = window.G7 || {};
       const paidAmt = list.filter(b => b.payment.status === 'paid').reduce((n, b) => n + b.total, 0);
       rev += total; paid += paidAmt; pax += paxCount(list);
       const pct = cap ? Math.round((sold / cap) * 100) : 0;
-      const badge = t.cancelled ? '<span class="of-badge bad">CANCELLED</span>' : `<span class="of-badge ${idx % 2 ? 'ok' : ''}">${idx % 2 ? 'RETURNING' : 'DEPARTING'}</span>`;
-      return `<article class="of-trip ${idx % 2 ? 'alt' : ''}">
+      const back = r.id !== config.routes[0].id;
+      const badge = t.cancelled ? '<span class="of-badge bad">CANCELLED</span>' : t.extra ? '<span class="of-badge gold">EXTRA TRIP</span>' : `<span class="of-badge ${back ? 'ok' : ''}">${back ? 'RETURNING' : 'DEPARTING'}</span>`;
+      return `<article class="of-trip ${back ? 'alt' : ''}">
         <header><span class="of-circ">${icon('ship')}</span><div><h3>${esc(trips.routeLabel(r))}</h3><p>Departs at ${u.fmtTime(t.departs)}</p></div>${badge}</header>
         <div class="of-prog"><i style="width:${pct}%"></i></div>
         <div class="of-prog-t"><b>${sold} / ${cap} seats occupied</b><span>${paxCount(list)} passengers · ${list.length} bookings</span></div>
@@ -107,7 +109,7 @@ window.G7 = window.G7 || {};
           <div>${icon('doc')}<small>Bookings</small><b>${list.length}</b></div>
         </div>
         <footer><span>Sales <b>${u.money(total)}</b> (collected ${u.money(paidAmt)})</span>
-        <button class="of-btn outline" data-view="${r.id}">View Details ${icon('arrow')}</button></footer></article>`;
+        <button class="of-btn outline" data-view="${t.id}">View Details ${icon('arrow')}</button></footer></article>`;
     }).join('');
 
     $('#stats', el).innerHTML = `<section class="of-band">
@@ -120,7 +122,7 @@ window.G7 = window.G7 || {};
       <div class="of-grid2">${cards}</div>`;
 
     $$('[data-view]', el).forEach(b => b.addEventListener('click', () => {
-      F.tdate = F.date; F.troute = b.dataset.view; F.tpage = 1; tab = 'trips'; draw();
+      F.tdate = F.date; F.troute = 'all'; F.tq = ''; F.tpage = 1; tab = 'trips'; draw();
     }));
   }
 
@@ -206,7 +208,9 @@ window.G7 = window.G7 || {};
 
   // ---- manifest ----------------------------------------------------------
   function manifest(el) {
-    const t = trips.get(F.date, F.routeId);
+    const dayTrips = trips.forDate(F.date);
+    const t = dayTrips.find(x => x.id === F.mtrip) || dayTrips.find(x => x.routeId === F.routeId) || dayTrips[0];
+    F.mtrip = t.id;
     const rows = [];
     confirmedFor(t.id).forEach(b => b.passengers.forEach((p, i) => rows.push({ b, p, i })));
     rows.sort((a, b) => (a.p.seat || 999) - (b.p.seat || 999));
@@ -214,7 +218,7 @@ window.G7 = window.G7 || {};
 
     el.innerHTML = `${head('people', 'Passenger Manifest', 'View and print the list of passengers for a selected trip.')}
       <div class="of-filters no-print"><label class="inl">Travel date${dateInput('d', F.date)}</label>
-        <label class="inl">Trip<div class="of-input"><select id="r">${routeOptions(F.routeId, true)}</select></div></label><span class="sp"></span>
+        <label class="inl">Trip<div class="of-input"><select id="r">${dayTrips.map(x => `<option value="${x.id}" ${x.id === t.id ? 'selected' : ''}>${esc(tripLabel(x))}</option>`).join('')}</select></div></label><span class="sp"></span>
         <button class="of-btn navy" id="print">${icon('print')} Print Manifest</button></div>
       <div class="printable">
       <section class="of-summary">
@@ -227,8 +231,8 @@ window.G7 = window.G7 || {};
       <div class="of-panel"><div class="of-listbar"><div><h3>Passenger List</h3><span>${rows.length} passengers booked for this trip. <b id="bcount">${rows.filter(r => r.p.boarded).length}</b> boarded.</span></div>
         <div class="of-input wide no-print">${icon('search')}<input id="mq" value="${esc(F.mq)}" placeholder="Search by name or reference number"></div></div>
       <div id="mlist"></div></div></div>`;
-    $('#d', el).addEventListener('change', e => { F.date = e.target.value || u.today(); manifest(el); });
-    $('#r', el).addEventListener('change', e => { F.routeId = e.target.value; manifest(el); });
+    $('#d', el).addEventListener('change', e => { F.date = e.target.value || u.today(); F.mtrip = ''; manifest(el); });
+    $('#r', el).addEventListener('change', e => { F.mtrip = e.target.value; manifest(el); });
     $('#print', el).addEventListener('click', () => window.print());
 
     function list() {
@@ -262,7 +266,7 @@ window.G7 = window.G7 || {};
     const out = [];
     for (let i = 0; i < days; i++) {
       const d = u.addDays(start, i);
-      config.routes.forEach(r => out.push(trips.get(d, r.id)));
+      trips.forDate(d).forEach(t => out.push(t));
     }
     const q = F.tq.trim().toLowerCase();
     return out.filter(t => {
@@ -275,7 +279,7 @@ window.G7 = window.G7 || {};
   }
 
   function tripsTab(el) {
-    el.innerHTML = `${head('ship', 'Trips & Seats', 'View trips, check seat availability, and manage trip schedules.')}
+    el.innerHTML = `${head('ship', 'Trips & Seats', 'View trips, check seat availability, and manage trip schedules.', `<button class="of-btn navy" id="addtrip">${icon('plus')} Add Trip</button>`)}
       <div class="of-filters">
         <label>Date${dateInput('td', F.tdate)}</label>
         <label>Route<div class="of-input"><select id="tr"><option value="all">All routes</option>${routeOptions(F.troute)}</select></div></label>
@@ -289,6 +293,7 @@ window.G7 = window.G7 || {};
     $('#ts', el).addEventListener('change', e => { F.tstatus = e.target.value; F.tpage = 1; list(); });
     $('#tq', el).addEventListener('input', e => { F.tq = e.target.value; F.tpage = 1; list(); });
     $('#clr', el).addEventListener('click', () => { F.tdate = ''; F.troute = 'all'; F.tstatus = 'all'; F.tq = ''; F.tpage = 1; tripsTab(el); });
+    $('#addtrip', el).addEventListener('click', () => addTripModal(() => tripsTab(el)));
 
     function list() {
       const all = tripList();
@@ -301,7 +306,7 @@ window.G7 = window.G7 || {};
         const fromP = config.ports[t.route.from], toP = config.ports[t.route.to];
         return `<div class="of-trow">
           <div class="d"><small>${dd.toLocaleDateString('en-PH', { weekday: 'short' })}</small><b>${dd.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</b></div>
-          <div class="r"><b>${esc(trips.routeLabel(t.route))}</b><small>${esc(fromP.area)} → ${esc(toP.area)}</small></div>
+          <div class="r"><b>${esc(trips.routeLabel(t.route))}${t.extra ? ' <span class="of-badge gold">EXTRA</span>' : ''}</b><small>${esc(fromP.area)} → ${esc(toP.area)}</small></div>
           <div><small>Departure</small><b>${u.fmtTime(t.departs)}</b></div>
           <div class="v"><small>Vessel</small><span>${esc(config.vessel)}</span></div>
           <div><small>Total Seats</small><b>${cap}</b></div><div><small>Booked</small><b>${cap - av}</b></div><div><small>Available</small><b>${av}</b></div>
@@ -317,46 +322,151 @@ window.G7 = window.G7 || {};
       const s = e.target.closest('[data-seats]'), m = e.target.closest('[data-manage]');
       const id = (s || m) && (s || m).dataset[s ? 'seats' : 'manage'];
       if (!id) return;
-      const [date, routeId] = id.split('|');
-      openTrip(date, routeId, !!s, list);
+      openTrip(id, !!s, list);
     });
   }
 
-  // Modal to manage one trip: time, cancel, note and (optionally) the seat plan
-  function openTrip(date, routeId, withSeats, onChange) {
-    const m = u.modal('', 'wide');
+  // Header block shared by the trip modals
+  function tripHead(t) {
+    const f = config.ports[t.route.from], to = config.ports[t.route.to];
+    return `<header class="of-mh"><span class="of-circ big">${icon('ship')}</span><div>
+      <h3>${esc(trips.routeLabel(t.route))}${t.extra ? ' <span class="of-badge gold">EXTRA TRIP</span>' : ''}${t.cancelled ? ' <span class="of-badge bad">CANCELLED</span>' : ''}</h3>
+      <p>${u.fmtDate(t.date)} · ${esc(config.vessel)}</p><small>${esc(f.area)} → ${esc(to.area)}</small></div></header>`;
+  }
+
+  // Moves every confirmed booking of trip src onto trip dst. Returns { ok, reason }
+  function moveBookings(src, dst) {
+    const list = confirmedFor(src.id);
+    const map = trips.seatMap(dst);
+    const clash = [];
+    list.forEach(b => b.passengers.forEach(p => { if (p.seat && (!map[p.seat] || map[p.seat].state !== 'available')) clash.push(p.seat); }));
+    if (clash.length) return { ok: false, reason: 'Seat(s) ' + clash.join(', ') + ' are not free on the new trip.' };
+    list.forEach(b => store.updateBooking(b.ref, x => { x.tripId = dst.id; x.date = dst.date; x.routeId = dst.routeId; }));
+    return { ok: true, count: list.length };
+  }
+
+  // Modal to manage one trip: departure time, note, status, reschedule; or (withSeats) the seat plan
+  function openTrip(tripId, withSeats, onChange) {
+    const m = u.modal('', 'wide of-mod');
+    const done = () => { onChange && onChange(); };
+
     function paint() {
-      const t = trips.get(date, routeId);
-      m.el.innerHTML = `<div class="of-modal"><h3>${esc(trips.routeLabel(t.route))} · ${u.fmtDate(t.date)}</h3>
-        <div class="of-filters slim">
-          <label>Departure time<div class="of-input"><input type="time" id="time" value="${t.departs}"></div></label>
-          <button class="of-btn outline" id="save-time">Save time</button>
-          <button class="of-btn ${t.cancelled ? 'navy' : 'danger'}" id="toggle-cancel">${t.cancelled ? 'Restore trip' : 'Cancel trip'}</button></div>
-        <div class="of-filters slim"><label class="grow">Note<div class="of-input"><input id="note" value="${esc(t.note)}" placeholder="e.g. Delayed due to weather"></div></label>
-          <button class="of-btn outline" id="save-note">Save note</button></div>
-        <p class="of-hint">Cancelling a trip stops new bookings; existing bookings stay on file so you can contact passengers.${withSeats ? ' Click a free seat to block it, or a blocked seat to release it.' : ''}</p>
-        ${withSeats ? '<div id="map"></div>' : ''}</div>`;
-      $('#save-time', m.el).addEventListener('click', () => { store.setTripOverride(t.id, { departs: $('#time', m.el).value || t.route.departs }); u.toast('Departure time saved.', 'ok'); paint(); onChange && onChange(); });
-      $('#toggle-cancel', m.el).addEventListener('click', () => {
-        if (!t.cancelled && !confirm('Cancel this trip?')) return;
-        store.setTripOverride(t.id, { cancelled: !t.cancelled });
-        paint(); onChange && onChange();
+      const t = trips.byId(tripId);
+      if (!t) { m.close(); done(); return; }
+      const booked = confirmedFor(t.id).length;
+
+      if (withSeats) {
+        m.el.innerHTML = `<div class="of-modal">${tripHead(t)}
+          <p class="of-hint">Click a free seat to block it, or a blocked seat to release it. Seats with bookings cannot be changed here.</p><div id="map"></div></div>`;
+        return paintMap();
+      }
+
+      m.el.innerHTML = `<div class="of-modal">${tripHead(t)}
+        <div class="of-mgrid">
+          <section class="of-mcard"><span class="of-circ blue">${icon('clock')}</span><div class="f"><h4>Departure Time</h4><p>Set a new departure time for this trip.</p>
+            <div class="of-input">${icon('clock')}<input type="time" id="time" value="${t.departs}"></div></div></section>
+          <aside class="of-mnote">${icon('info', 'of-circ-ic')}<div><h4>Important</h4><ul>
+            <li>A new departure time applies to this trip's existing tickets as well, so inform passengers who have already booked${booked ? ' (' + booked + ' booking' + (booked > 1 ? 's' : '') + ')' : ''}.</li>
+            <li>Cancelling a trip stops new bookings; existing bookings stay on file.</li></ul></div></aside>
+        </div>
+        <section class="of-mcard flat"><span class="of-circ blue">${icon('doc')}</span><div class="f"><h4>Note (Optional)</h4><p>Add a note (e.g., delayed due to weather). This is shown to staff.</p>
+          <textarea id="note" maxlength="200" rows="3" placeholder="e.g. Delayed due to weather">${esc(t.note)}</textarea><div class="cnt"><span id="cnt">${t.note.length}</span> / 200</div></div></section>
+        <section class="of-mcard flat"><span class="of-circ blue">${icon('calendarcheck')}</span><div class="f"><h4>Reschedule to another date</h4>
+          <p>Moves this trip${booked ? ' and its ' + booked + ' booking(s)' : ''} to a different day. The original trip is ${t.extra ? (booked ? 'cancelled' : 'removed') : 'cancelled'}.</p>
+          <div class="of-filters slim"><div class="of-input">${icon('calendar')}<input type="date" id="rs-date" value="${t.date}" min="${u.today()}"></div>
+          <div class="of-input">${icon('clock')}<input type="time" id="rs-time" value="${t.departs}"></div>
+          <button class="of-btn outline" id="rs-go">Reschedule</button></div></div></section>
+        <footer class="of-mfoot">
+          <button class="of-btn ${t.cancelled ? 'navy' : 'danger'} left" id="toggle-cancel">${t.cancelled ? 'Restore trip' : 'Cancel trip'}</button>
+          ${t.extra && !booked ? `<button class="of-btn danger left" id="del-trip">${icon('trash')} Delete trip</button>` : ''}
+          <span class="sp"></span>
+          <button class="of-btn ghost" id="m-cancel">Cancel</button>
+          <button class="of-btn ghost" id="save-note">Save note only</button>
+          <button class="of-btn navy" id="save-all">Save changes</button></footer></div>`;
+
+      const note = $('#note', m.el);
+      note.addEventListener('input', () => { $('#cnt', m.el).textContent = note.value.length; });
+      const saveNote = () => store.setTripOverride(t.id, { note: note.value.trim() });
+      $('#m-cancel', m.el).addEventListener('click', () => m.close());
+      $('#save-note', m.el).addEventListener('click', () => { saveNote(); u.toast('Note saved.', 'ok'); done(); });
+      $('#save-all', m.el).addEventListener('click', () => {
+        const time = $('#time', m.el).value;
+        if (!time) return u.toast('Choose a departure time.', 'err');
+        const clash = trips.forDate(t.date).some(x => x.id !== t.id && x.routeId === t.routeId && x.departs === time);
+        if (clash) return u.toast('Another trip on this route already departs at that time.', 'err');
+        saveNote();
+        store.setTripOverride(t.id, { departs: time });
+        u.toast('Trip updated.', 'ok'); done(); m.close();
       });
-      $('#save-note', m.el).addEventListener('click', () => { store.setTripOverride(t.id, { note: $('#note', m.el).value.trim() }); u.toast('Note saved.', 'ok'); });
-      if (withSeats) paintMap();
+      $('#toggle-cancel', m.el).addEventListener('click', () => {
+        if (!t.cancelled && !confirm('Cancel this trip? New bookings will be stopped.')) return;
+        store.setTripOverride(t.id, { cancelled: !t.cancelled });
+        done(); paint();
+      });
+      const del = $('#del-trip', m.el);
+      if (del) del.addEventListener('click', () => {
+        if (!confirm('Delete this extra trip?')) return;
+        store.removeExtraTrip(t.id); u.toast('Trip deleted.', 'ok'); done(); m.close();
+      });
+      $('#rs-go', m.el).addEventListener('click', () => {
+        const date = $('#rs-date', m.el).value, time = $('#rs-time', m.el).value;
+        if (!date || !time) return u.toast('Choose the new date and time.', 'err');
+        if (date === t.date && time === t.departs) return u.toast('Pick a different date or time.', 'err');
+        if (date === t.date) { // same day: just a new time
+          if (trips.forDate(date).some(x => x.id !== t.id && x.routeId === t.routeId && x.departs === time)) return u.toast('Another trip on this route already departs at that time.', 'err');
+          store.setTripOverride(t.id, { departs: time }); u.toast('Trip rescheduled to ' + u.fmtTime(time) + '.', 'ok'); done(); return paint();
+        }
+        if (!confirm('Move this trip to ' + u.fmtDate(date) + ' at ' + u.fmtTime(time) + '?' + (booked ? ' Its bookings move with it.' : ''))) return;
+        // Target: a free extra trip on the new date at that time, or the route's default trip there (taking the new time)
+        let dst = trips.forDate(date).find(x => x.routeId === t.routeId && x.departs === time);
+        if (!dst) {
+          const def = trips.get(date, t.routeId);
+          if (!def.cancelled && confirmedFor(def.id).length === 0 && !t.extra) { store.setTripOverride(def.id, { departs: time }); dst = trips.get(date, t.routeId); }
+          else { const r = trips.addExtra(date, t.routeId, time); if (!r.ok) return u.toast(r.reason, 'err'); dst = r.trip; }
+        }
+        if (dst.cancelled) store.setTripOverride(dst.id, { cancelled: false });
+        const mv = moveBookings(t, dst);
+        if (!mv.ok) { if (dst.extra) store.removeExtraTrip(dst.id); return u.toast(mv.reason, 'err'); }
+        if (t.extra && !booked) store.removeExtraTrip(t.id);
+        else store.setTripOverride(t.id, { cancelled: true, note: ('Rescheduled to ' + u.fmtDate(date) + ' ' + u.fmtTime(time)).slice(0, 200) });
+        u.toast('Trip rescheduled to ' + u.fmtDate(date) + '.', 'ok'); done(); m.close();
+      });
     }
+
     function paintMap() {
-      const cur = trips.get(date, routeId);
+      const cur = trips.byId(tripId);
       seatmap.render($('#map', m.el), trips.seatMap(cur), {
         mode: 'admin',
         onSeat(n) {
           const blocked = cur.blocked.indexOf(n) >= 0 ? cur.blocked.filter(x => x !== n) : cur.blocked.concat(n);
           store.setTripOverride(cur.id, { blocked });
-          paintMap(); onChange && onChange();
+          paintMap(); done();
         },
       });
     }
     paint();
+  }
+
+  // Modal to add a new (extra) trip on any route/date
+  function addTripModal(onDone) {
+    const m = u.modal(`<div class="of-modal"><header class="of-mh"><span class="of-circ big">${icon('ship')}</span><div><h3>Add Trip</h3><p>Add an extra departure to the schedule.</p></div></header>
+      <form id="at" class="of-mform">
+        <label>Date${dateInput('at-d', u.today())}</label>
+        <label>Route<div class="of-input"><select id="at-r">${routeOptions(config.routes[0].id)}</select></div></label>
+        <label>Departure time<div class="of-input">${icon('clock')}<input type="time" id="at-t" value="${config.routes[0].departs}" required></div></label>
+        <p class="of-hint">The default 07:00 / 10:00 trips already exist every day. Use this for additional sailings, or on a day when the route needs another time.</p>
+        <footer class="of-mfoot"><span class="sp"></span><button type="button" class="of-btn ghost" id="at-x">Cancel</button><button class="of-btn navy">Add trip</button></footer>
+      </form></div>`, 'of-mod');
+    $('#at-r', m.el).addEventListener('change', e => { $('#at-t', m.el).value = config.routes.find(r => r.id === e.target.value).departs; });
+    $('#at-x', m.el).addEventListener('click', () => m.close());
+    $('#at', m.el).addEventListener('submit', e => {
+      e.preventDefault();
+      const r = trips.addExtra($('#at-d', m.el).value, $('#at-r', m.el).value, $('#at-t', m.el).value);
+      if (!r.ok) return u.toast(r.reason, 'err');
+      u.toast('Trip added.', 'ok');
+      F.tdate = r.trip.date; F.tpage = 1;
+      m.close(); onDone();
+    });
   }
 
   // ---- fares -------------------------------------------------------------
@@ -414,7 +524,7 @@ window.G7 = window.G7 || {};
       const headRow = ['Ref', 'Date', 'Route', 'Departs', 'Passenger', 'Fare type', 'Seat', 'Amount', 'Contact', 'Phone', 'Payment', 'Status', 'Boarded'];
       const lines = [headRow.join(',')];
       store.bookings().forEach(b => b.passengers.forEach(p => lines.push([
-        b.ref, b.date, trips.routeLabel(trips.route(b.routeId)), trips.get(b.date, b.routeId).departs, p.name, p.fareType, p.seat || '', p.fare,
+        b.ref, b.date, trips.routeLabel(trips.route(b.routeId)), (trips.byId(b.tripId) || trips.get(b.date, b.routeId)).departs, p.name, p.fareType, p.seat || '', p.fare,
         b.contact.name, b.contact.phone, b.payment.status, b.status, p.boarded ? 'yes' : 'no',
       ].map(u.csvCell).join(','))));
       u.download('g7-bookings.csv', lines.join('\n'), 'text/csv');

@@ -16,7 +16,7 @@ window.G7 = window.G7 || {};
   function firstBookableDate() {
     for (let i = 0; i <= config.advanceBookingDays; i++) {
       const d = u.addDays(u.today(), i);
-      if (config.routes.some(r => trips.bookable(trips.get(d, r.id)).ok)) return d;
+      if (trips.forDate(d).some(t => trips.bookable(t).ok)) return d;
     }
     return u.today();
   }
@@ -29,6 +29,7 @@ window.G7 = window.G7 || {};
       step: 1,
       date: firstBookableDate(),
       routeId: config.routes[0].id,
+      tripId: '',
       counts,
       seats: [],
       section: 'front',
@@ -45,7 +46,13 @@ window.G7 = window.G7 || {};
   const seatedPax = () => config.fareOrder.reduce((n, f) => n + (config.fares[f].seat ? S.counts[f] : 0), 0);
   const infants = () => config.fareOrder.reduce((n, f) => n + (config.fares[f].seat ? 0 : S.counts[f]), 0);
   const adults = () => S.counts.regular + S.counts.student + S.counts.senior_pwd;
-  const currentTrip = () => trips.get(S.date, S.routeId);
+  // The selected trip; falls back to a trip of the chosen route (or the first one) on that date
+  function currentTrip() {
+    const list = trips.forDate(S.date);
+    let t = list.find(x => x.id === S.tripId) || list.find(x => x.routeId === S.routeId) || list[0];
+    S.tripId = t.id; S.routeId = t.routeId;
+    return t;
+  }
   const needsId = f => f === 'student' || f === 'senior_pwd';
   const needsAge = f => f === 'child' || f === 'infant';
 
@@ -122,12 +129,23 @@ window.G7 = window.G7 || {};
     </aside>`;
   }
 
+  let lastScreen = null; // which screen was drawn last, so +/- clicks don't jump the page
+
   function draw() {
+    const y = window.pageYOffset || 0;
+    const screen = S.done ? 'done' : S.step;
+    const sameScreen = screen === lastScreen;
+    lastScreen = screen;
+    drawScreen();
+    // Same step redrawn (counters, date, seat toggles): stay where the user was. New step: go to top.
+    window.scrollTo(0, sameScreen ? y : 0);
+  }
+
+  function drawScreen() {
     if (S.done) return drawDone();
     root.innerHTML = `<div class="bk"><div class="bk-wrap">${stepper()}
       <div class="bk-layout"><section class="bk-main" id="step-body"></section>${tripSummary()}</div></div></div>`;
     [null, step1, step2, step3, step4][S.step]($('#step-body', root));
-    window.scrollTo(0, 0);
   }
 
   function head(iconName, title, sub) {
@@ -139,12 +157,13 @@ window.G7 = window.G7 || {};
     const fares = store.fares();
     const maxDate = u.addDays(u.today(), config.advanceBookingDays);
 
-    const routeCards = config.routes.map(r => {
-      const t = trips.get(S.date, r.id);
+    const cur = currentTrip();
+    const routeCards = trips.forDate(S.date).map(t => {
+      const r = t.route;
       const b = trips.bookable(t);
       const left = trips.availableCount(t);
-      return `<label class="bk-route ${r.id === S.routeId ? 'on' : ''} ${b.ok ? '' : 'off'}">
-        <input type="radio" name="route" value="${r.id}" ${r.id === S.routeId ? 'checked' : ''}>
+      return `<label class="bk-route ${t.id === cur.id ? 'on' : ''} ${b.ok ? '' : 'off'}">
+        <input type="radio" name="route" value="${t.id}" ${t.id === cur.id ? 'checked' : ''}>
         <span class="bk-radio"></span>
         <div><b>${esc(trips.routeLabel(r))}</b>
         <span>Departs ${u.fmtTime(t.departs)} · ${esc(config.travelTime)}</span></div>
@@ -174,9 +193,9 @@ window.G7 = window.G7 || {};
       <div class="bk-actions"><span></span><button class="btn-navy lg" id="next">Choose seats ${icon('arrow')}</button></div>`;
 
     $('#b-date', el).addEventListener('change', e => {
-      if (e.target.value) { S.date = e.target.value; S.seats = []; draw(); }
+      if (e.target.value) { S.date = e.target.value; S.tripId = ''; S.seats = []; draw(); }
     });
-    $$('input[name=route]', el).forEach(r => r.addEventListener('change', e => { S.routeId = e.target.value; S.seats = []; draw(); }));
+    $$('input[name=route]', el).forEach(r => r.addEventListener('change', e => { S.tripId = e.target.value; S.seats = []; draw(); }));
     $$('[data-inc]', el).forEach(b => b.addEventListener('click', () => {
       if (totalPax() >= config.maxPassengersPerBooking) return u.toast('Maximum ' + config.maxPassengersPerBooking + ' passengers per booking.', 'err');
       S.counts[b.dataset.inc]++; S.seats = []; draw();
@@ -375,7 +394,6 @@ window.G7 = window.G7 || {};
     root.innerHTML = `<div class="bk"><div class="bk-wrap bk-done">${ticket.bookingHTML(b, { confirmed: true, extra })}</div></div>`;
     ticket.wirePrint(root);
     $('#again', root).addEventListener('click', () => { S = fresh(); draw(); });
-    window.scrollTo(0, 0);
   }
 
   // Used by the landing page search box: start a fresh booking with these choices
@@ -383,7 +401,7 @@ window.G7 = window.G7 || {};
     prefill(o) {
       S = fresh();
       if (o.date) S.date = o.date;
-      if (o.routeId) S.routeId = o.routeId;
+      if (o.routeId) { S.routeId = o.routeId; S.tripId = ''; }
       if (o.pax) S.counts.regular = o.pax;
     },
   };

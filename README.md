@@ -55,6 +55,13 @@ Optional image files: `assets/logo.png` (header logo), `assets/logo-white.png` (
   printable manifest with boarding checkboxes, cancel trip / change time / block seats,
   CSV + JSON export, sample data loader
 
+## Trips: add and reschedule
+
+- Every route has a default trip each day (07:00 / 10:00, from `config.routes`).
+- Ticket Office -> Trips & Seats -> **Add Trip** creates an extra departure (any date/route/time). Extra trips are stored under `g7.extraTrips`.
+- The ⋮ menu on a trip changes its departure time and note, cancels/restores it, deletes an empty extra trip, or **reschedules** it to another date/time. Rescheduling moves its bookings (same seat numbers; blocked if a seat is not free on the new trip) and cancels the original.
+- A new departure time also shows on that trip's existing tickets, so tell booked passengers.
+
 ## Debugging tips
 
 - Open DevTools (F12) -> Console. Modules log errors with a `[store]` / `[app]` prefix.

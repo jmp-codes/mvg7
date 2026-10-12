@@ -129,7 +129,7 @@ window.G7 = window.G7 || {};
     const legal = config.legal || {};
     return `
     <section class="hero">
-      <img class="hero-photo" src="assets/hero.jpg" alt="" onerror="this.remove()">
+      <img class="hero-photo" src="assets/hero.jpg" alt="" onload="this.classList.add('ready')" onerror="this.parentNode.classList.add('no-photo');this.remove()">
       ${HERO_ART}
       <div class="hero-shade"></div>
       <div class="hero-inner">

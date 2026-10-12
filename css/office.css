@@ -162,3 +162,24 @@ body.is-office main { max-width: 1480px; padding: 0 clamp(10px, 3vw, 36px) 3rem;
 @media print {
   body.is-office { background: #fff; } .of-summary, .of-panel { box-shadow: none; }
 }
+
+/* trip modal (Manage trip / Add trip / View seats) */
+.modal.of-mod { width: min(860px, 100%); border-radius: 18px; padding: 1.4rem 1.6rem; color: #1d2b44; }
+.modal.of-mod .modal-x { top: 1rem; right: 1.2rem; color: #0a2f7a; }
+.of-mh { display: flex; align-items: center; gap: 1.1rem; margin-bottom: 1.2rem; padding-right: 2rem; }
+.of-mh h3 { margin: 0; font-size: 1.5rem; color: #0c1f4a; } .of-mh p { margin: .2rem 0 0; color: #3b4a62; } .of-mh small { color: #6b7a90; }
+.of-mgrid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+.of-mcard { display: flex; gap: 1rem; align-items: flex-start; padding: 1.1rem 1.2rem; border-radius: 14px; background: #fff; border: 1px solid #e3eaf4; }
+.of-mcard.flat { border: 0; border-top: 1px solid #e3eaf4; border-radius: 0; padding: 1.1rem 0; }
+.of-mcard .of-circ { width: 44px; height: 44px; } .of-mcard .f { flex: 1; min-width: 0; }
+.of-mcard h4, .of-mnote h4 { margin: 0 0 .2rem; font-size: 1.05rem; color: #0c1f4a; } .of-mcard p { margin: 0 0 .8rem; font-size: .85rem; color: #5b6a82; }
+.of-mcard textarea { width: 100%; font: inherit; padding: .7rem .8rem; border: 1px solid #c9d3e3; border-radius: 10px; resize: vertical; color: #1d2b44; }
+.of-mcard textarea:focus { outline: 0; border-color: #0a2f7a; box-shadow: 0 0 0 3px rgba(10, 47, 122, .12); }
+.of-mcard .cnt { text-align: right; font-size: .8rem; color: #6b7a90; margin-top: .3rem; }
+.of-mnote { display: flex; gap: .8rem; background: #eaf2fc; border-radius: 14px; padding: 1.1rem 1.2rem; }
+.of-mnote ul { margin: .3rem 0 0; padding-left: 1.1rem; display: grid; gap: .45rem; font-size: .84rem; color: #3b4a62; }
+.of-mfoot { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; padding-top: 1rem; border-top: 1px solid #e3eaf4; margin-top: .4rem; }
+.of-mfoot .left { order: -1; }
+.of-mform { display: grid; gap: .9rem; } .of-mform label { display: grid; gap: .35rem; font-size: .8rem; font-weight: 600; color: #3b4a62; }
+.of-badge.gold { background: #fdf0d2; color: #92620a; margin-left: .4rem; vertical-align: middle; }
+@media (max-width: 700px) { .of-mgrid { grid-template-columns: 1fr; } .of-mh h3 { font-size: 1.2rem; } }

@@ -59,6 +59,14 @@ G7.store = (function () {
     return all[id];
   }
 
+  // ---- Extra trips added by the Ticket Office (beyond the default daily schedule) ----
+  function extraTrips() { return get('extraTrips', []); }
+  function addExtraTrip(t) { const l = extraTrips(); l.push(t); set('extraTrips', l); return t; }
+  function removeExtraTrip(id) {
+    set('extraTrips', extraTrips().filter(t => t.id !== id));
+    const all = tripOverrides(); delete all[id]; set('trips', all);
+  }
+
   // ---- Fares (only prices are overridable) ----------------------------
   function fares() {
     const saved = get('farePrices', {});
@@ -73,11 +81,11 @@ G7.store = (function () {
 
   // ---- Maintenance --------------------------------------------------
   function exportAll() {
-    return { exportedAt: new Date().toISOString(), bookings: bookings(), trips: tripOverrides(), farePrices: get('farePrices', {}) };
+    return { exportedAt: new Date().toISOString(), bookings: bookings(), trips: tripOverrides(), extraTrips: extraTrips(), farePrices: get('farePrices', {}) };
   }
   function resetAll() {
-    ['bookings', 'trips', 'farePrices'].forEach(k => localStorage.removeItem(PREFIX + k));
+    ['bookings', 'trips', 'extraTrips', 'farePrices'].forEach(k => localStorage.removeItem(PREFIX + k));
   }
 
-  return { bookings, saveBookings, getBooking, addBooking, updateBooking, tripOverride, tripOverrides, setTripOverride, fares, setFarePrices, exportAll, resetAll };
+  return { bookings, saveBookings, getBooking, addBooking, updateBooking, tripOverride, tripOverrides, setTripOverride, extraTrips, addExtraTrip, removeExtraTrip, fares, setFarePrices, exportAll, resetAll };
 })();

@@ -18,7 +18,7 @@ G7.ticket = (function () {
   // opts.extra     -> extra HTML (buttons) placed next to Print
   function bookingHTML(b, opts) {
     opts = opts || {};
-    const trip = trips.get(b.date, b.routeId);
+    const trip = trips.byId(b.tripId) || trips.get(b.date, b.routeId);
     const r = trip.route;
     const cancelled = b.status === 'cancelled';
     const paid = b.payment.status === 'paid';
