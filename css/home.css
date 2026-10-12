@@ -236,3 +236,9 @@ body.is-home .topbar { position: absolute; }
 @media (max-width: 860px) { .nav-links, .nav-sep { display: none; } .topbar { justify-content: space-between; min-height: 72px; } .brand.has-logo .logo-img { height: 54px; margin-left: 0; } .nav-cta { margin-right: 0; } .topbar .wave { width: 60px; opacity: .8; } }
 @media (max-width: 520px) { .nav-cta .btn-outline { display: none; } .topbar .wave-r { display: none; } }
 .topbar .wave { display: none !important; }
+
+/* ---- Round badge logo ---- */
+.brand.has-logo .logo-img { height: 78px; width: auto; margin-left: clamp(0rem, 2vw, 1.6rem); }
+.topbar { min-height: 92px; }
+.logo-slot.has-logo .logo-img { max-width: 190px; }
+@media (max-width: 860px) { .brand.has-logo .logo-img { height: 54px; } }

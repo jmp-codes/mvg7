@@ -19,7 +19,7 @@ window.G7 = window.G7 || {};
   const FB = '<svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M14 8h3V4h-3a4 4 0 0 0-4 4v2H7v4h3v8h4v-8h3l1-4h-4V8.5c0-.3.2-.5.5-.5z"/></svg>';
   const YT = '<svg class="ic" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.200 0-7.800.4A2.500 2.500 0 0 0 2.400 7.200C2 8.800 2 12 2 12s0 3.200.4 4.800a2.500 2.500 0 0 0 1.800 1.800C5.800 19 12 19 12 19s6.200 0 7.800-.4a2.500 2.500 0 0 0 1.800-1.800C22 15.200 22 12 22 12s0-3.200-.4-4.800zM10 15V9l5.200 3z"/></svg>';
 
-  // Stand-in logo for the dark footer. Drop assets/logo.png to use your real one.
+  // Stand-in shown only until assets/logo-white.png loads.
   const LOGO_BIG = `<svg class="logo-big" viewBox="0 0 280 140" aria-hidden="true">
     <path d="M6 100c30-22 62-26 92-10 28 15 52 14 84-4-14 22-42 34-76 28-30-5-60-30-100-14z" fill="#5bb7ec"/>
     <path d="M30 112c26-12 52-8 78 6 20 10 44 10 74-6-10 14-34 26-62 22-28-4-56-26-90-22z" fill="#2b86d4" opacity=".85"/>

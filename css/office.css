@@ -399,3 +399,7 @@ ul.chk li::before { content: '✓'; position: absolute; left: 0; top: 0; width: 
 /* light logo variant sits directly on the dark sidebar (no plate) */
 .os-side .brand.has-logo { background: none; padding: 4px 18px; margin: 0 .6rem .6rem; border-radius: 0; }
 .os-side .brand.has-logo .logo-img { max-width: 230px; }
+
+/* ---- Round badge logo in the sidebar ---- */
+.os-side .brand.has-logo { text-align: center; }
+.os-side .brand.has-logo .logo-img { max-width: 150px; margin: 0 auto; }

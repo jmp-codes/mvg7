@@ -5,13 +5,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>G7 Marine Transport - Book your sea journey</title>
   <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="preload" as="image" href="assets/logo.png">
   <link rel="preload" as="image" href="assets/hero.jpg">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/home.css">
   <link rel="stylesheet" href="css/booking.css">
   <link rel="stylesheet" href="css/office.css">
+  <style>
+    /* Loading screen: inline so it paints before the stylesheets arrive */
+    #boot{position:fixed;inset:0;z-index:9999;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.4rem;transition:opacity .45s ease,visibility .45s}
+    #boot.done{opacity:0;visibility:hidden;pointer-events:none}
+    #boot img{width:min(46vw,190px);height:auto;animation:bootPulse 1.6s ease-in-out infinite}
+    #boot .bar{width:min(52vw,200px);height:4px;border-radius:4px;background:#e3e9f3;overflow:hidden}
+    #boot .bar i{display:block;height:100%;width:40%;border-radius:4px;background:linear-gradient(90deg,#0a2f7a,#e8a33a);animation:bootBar 1.15s ease-in-out infinite}
+    #boot p{margin:0;font:600 .8rem/1 system-ui,sans-serif;letter-spacing:.18em;color:#0a2f7a;text-transform:uppercase}
+    @keyframes bootPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+    @keyframes bootBar{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+    @media (prefers-reduced-motion:reduce){#boot img,#boot .bar i{animation:none}}
+  </style>
 </head>
 <body>
+  <div id="boot" role="status" aria-live="polite">
+    <img src="assets/logo.png" alt="MV Group 7">
+    <div class="bar"><i></i></div>
+    <p>Loading</p>
+  </div>
+  <script>
+    // Hide the loading screen once everything (hero photo, fonts, scripts) has loaded.
+    // A 600 ms minimum avoids a flash; an 8 s cap means it can never get stuck.
+    (function () {
+      var t0 = Date.now(), b;
+      function hide() {
+        b = b || document.getElementById('boot'); if (!b) return;
+        var wait = Math.max(0, 600 - (Date.now() - t0));
+        setTimeout(function () { b.classList.add('done'); setTimeout(function () { b.remove(); }, 600); }, wait);
+      }
+      window.addEventListener('load', hide);
+      setTimeout(hide, 8000);
+    })();
+  </script>
   <header class="topbar no-print">
     
     <a class="brand" href="#/home" aria-label="G7 Marine Transport home">
