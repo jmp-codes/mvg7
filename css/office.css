@@ -391,3 +391,11 @@ ul.chk li::before { content: '✓'; position: absolute; left: 0; top: 0; width: 
 .of-sc { min-width: 32px; text-align: center; font-weight: 800; padding: .15rem .5rem; border-radius: 6px; }
 .of-sc.maint { background: repeating-linear-gradient(45deg, #cfd5de 0 5px, #b9c1cc 5px 10px); border: 1px dashed #5b6a82; } .of-sc.blk { background: #fbd48a; border: 1px solid #e8b04f; }
 @media (max-width: 800px) { .of-strip { grid-template-columns: 1fr; } }
+.os-side .brand.has-logo { align-self: flex-start; margin: 0 1rem 1rem; padding: 6px 12px; background: #fff; border-radius: 14px; }
+.os-side .brand.has-logo .logo-img { height: 58px; }
+/* bigger logo plate in the sidebar */
+.os-side .brand.has-logo { display: block; align-self: stretch; margin: 0 1rem 1.1rem; padding: 10px 14px; border-radius: 16px; }
+.os-side .brand.has-logo .logo-img { width: 100%; height: auto; max-width: 220px; margin: 0 auto; }
+/* light logo variant sits directly on the dark sidebar (no plate) */
+.os-side .brand.has-logo { background: none; padding: 4px 18px; margin: 0 .6rem .6rem; border-radius: 0; }
+.os-side .brand.has-logo .logo-img { max-width: 230px; }

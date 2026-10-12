@@ -42,7 +42,7 @@ Landing page photos live in `assets/`. Replace a file with another image of the 
 Phone, email, Facebook and YouTube links for the footer go in `contact` in `js/config.js`.
 The Travel Advisory text (bar and popup) is `advisory` in the same file.
 Also in `config.js`: `about` (About Us paragraph) and `legal` (Terms / Privacy / FAQ text; each link appears only once you fill it in).
-Optional image files: `assets/logo.png` (header logo), `assets/logo-white.png` (footer logo), `assets/about-bg.jpg` (About Us background).
+Logo: `assets/logo.png` (transparent PNG, header) and `assets/logo-white.png` (light version for the dark sidebar and footer; `assets/favicon.png` is the tab icon). Optional: `assets/about-bg.jpg`, `assets/about-bg.jpg` (About Us background).
 
 ## Features
 

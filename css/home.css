@@ -200,3 +200,39 @@ body.is-home main { max-width: none; margin: 0; padding: 0; }
   .sf-main { grid-template-columns: 1fr 1fr; row-gap: 2rem; } .sf-col { border: 0; padding: 0; }
 }
 @media (max-width: 560px) { .sf-main { grid-template-columns: 1fr; } .sf-boat { opacity: .12; } }
+
+/* Real logo (assets/logo.png): taller in the header; on dark areas it sits on a white plate */
+.brand.has-logo .logo-img { height: 54px; }
+.logo-slot.has-logo .logo-img { background: #fff; border-radius: 14px; padding: 8px 14px; max-width: 220px; }
+.brand.has-logo .logo-img { height: 64px; }
+.topbar { min-height: 76px; }
+.logo-slot.has-logo .logo-img { max-width: 260px; width: 100%; height: auto; }
+.logo-slot.has-logo .logo-img { background: none; padding: 0; border-radius: 0; }
+
+/* ---- Header v2: full-width cream bar, icon nav, wave ends ---- */
+:root { --cream: #ffffff; }
+.topbar, body.is-home .topbar { margin: 0; top: 0; left: 0; right: 0; border-radius: 0 0 22px 22px; background: var(--cream); box-shadow: 0 6px 22px rgba(8, 30, 70, .14); padding: .45rem clamp(1rem, 4vw, 3.2rem); min-height: 84px; overflow: hidden; gap: 1.2rem; }
+body.is-home .topbar { position: absolute; }
+.topbar > * { position: relative; z-index: 1; }
+.topbar .wave { position: absolute; z-index: 0; pointer-events: none; width: 120px; height: 100%; top: 0; }
+.wave-l { left: 0; background:
+  radial-gradient(circle at 0 0, transparent 38px, var(--gold) 39px, var(--gold) 43px, transparent 44px),
+  radial-gradient(circle at 0 100%, var(--brand) 0 34px, transparent 35px); }
+.wave-r { right: 0; background:
+  radial-gradient(circle at 100% 0, transparent 38px, var(--gold) 39px, var(--gold) 43px, transparent 44px),
+  radial-gradient(circle at 100% 100%, var(--brand) 0 34px, transparent 35px); }
+.brand.has-logo .logo-img { height: 70px; margin-left: clamp(0rem, 3vw, 2.4rem); }
+.nav-links { gap: clamp(.2rem, 1vw, .6rem); margin-left: auto; }
+.nav-links a { display: inline-flex; align-items: center; gap: .45rem; color: var(--brand); font-weight: 500; font-size: .92rem; padding: .55rem .95rem; border: 0; border-radius: 12px; }
+.nav-links a .ic { width: 1.15rem; height: 1.15rem; flex: none; }
+.nav-links a:hover { background: rgba(10, 47, 122, .07); border: 0; }
+.nav-links a.on, .nav-links a.on:hover { background: var(--brand); color: #fff; border: 0; }
+.nav-sep { width: 1px; height: 36px; background: #d5dbe6; flex: none; }
+.nav-cta { margin-right: clamp(0rem, 3vw, 2.4rem); }
+.nav-cta a .ic { width: 1.1rem; height: 1.1rem; }
+.nav-cta .btn-outline { background: #fff; border-color: #cfd6e4; border-radius: 12px; padding: .65rem 1.1rem; }
+.nav-cta .btn-navy { border-radius: 12px; padding: .65rem 1.2rem; }
+@media (max-width: 1100px) { .nav-links a span { display: none; } .nav-links a.on span { display: inline; } }
+@media (max-width: 860px) { .nav-links, .nav-sep { display: none; } .topbar { justify-content: space-between; min-height: 72px; } .brand.has-logo .logo-img { height: 54px; margin-left: 0; } .nav-cta { margin-right: 0; } .topbar .wave { width: 60px; opacity: .8; } }
+@media (max-width: 520px) { .nav-cta .btn-outline { display: none; } .topbar .wave-r { display: none; } }
+.topbar .wave { display: none !important; }

@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>G7 Marine Transport - Book your sea journey</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
   <link rel="preload" as="image" href="assets/hero.jpg">
   <link rel="stylesheet" href="css/styles.css">
   <link rel="stylesheet" href="css/home.css">
@@ -12,6 +13,7 @@
 </head>
 <body>
   <header class="topbar no-print">
+    
     <a class="brand" href="#/home" aria-label="G7 Marine Transport home">
       <svg class="logo-mark" viewBox="0 0 80 40" aria-hidden="true">
         <path d="M2 30c10-8 18-8 28-2s20 6 30-2" fill="none" stroke="#1b8fc7" stroke-width="3" stroke-linecap="round"/>
@@ -22,15 +24,16 @@
       <img class="logo-img" src="assets/logo.png" alt="G7 Marine Transport" onload="this.parentNode.classList.add('has-logo')" onerror="this.remove()">
     </a>
     <nav class="nav-links">
-      <a href="#/home" data-nav="home">Home</a>
-      <a href="#/home?s=routes">Routes &amp; Schedules</a>
-      <a href="#/home?s=guide">Travel Guide</a>
-      <a href="#/home?s=about">About Us</a>
-      <a href="#/home?s=contact">Contact</a>
+      <a href="#/home" data-nav="home"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>Home</span></a>
+      <a href="#/home?s=routes"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l2 3h14l2-3-9-3z"/><path d="M12 14V6l5 3-5 2"/><path d="M8 14l4-8"/></svg><span>Routes &amp; Schedules</span></a>
+      <a href="#/home?s=guide"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14M15 6v14"/></svg><span>Travel Guide</span></a>
+      <a href="#/home?s=about"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.3"/><path d="M17 14c2.5 0 4 2 4 5"/></svg><span>About Us</span></a>
+      <a href="#/home?s=contact"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg><span>Contact</span></a>
     </nav>
+    <span class="nav-sep" aria-hidden="true"></span>
     <div class="nav-cta">
-      <a class="btn-outline" href="#/office" data-nav="office">Ticket Office</a>
-      <a class="btn-navy" href="#/book" data-nav="book">Book Now</a>
+      <a class="btn-outline" href="#/office" data-nav="office"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9a2 2 0 0 0 0 6v3h18v-3a2 2 0 0 1 0-6V6H3z"/><path d="M14 6v12" stroke-dasharray="2 2"/></svg><span>Ticket Office</span></a>
+      <a class="btn-navy" href="#/book" data-nav="book"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span>Book Now</span></a>
     </div>
   </header>
 
