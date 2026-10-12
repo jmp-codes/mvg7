@@ -1,12 +1,12 @@
 /* ============================================================
  * app.js  -  App shell: hash router + navigation
- * Routes: #/home  #/book  #/ticket  #/office
+ * Routes: #/home  #/book  #/ticket   (the Ticket Office is its own page: g7-staff.html)
  * Home sections can be targeted with  #/home?s=routes  (id of the section)
  * Loaded last, after every module has registered its view.
  * ============================================================ */
 (function () {
   const { u } = G7;
-  const ROUTES = ['home', 'book', 'ticket', 'office'];
+  const ROUTES = ['home', 'book', 'ticket'];
   let lastView = null;
 
   function parse() {
@@ -46,5 +46,9 @@
   }
 
   window.addEventListener('hashchange', show);
-  document.addEventListener('DOMContentLoaded', show);
+  document.addEventListener('DOMContentLoaded', function () {
+    // wait for the shared database (trips, fares, taken seats) before the first render
+    var ready = G7.cloud && G7.cloud.ready ? G7.cloud.ready : Promise.resolve();
+    ready.then(show, show);
+  });
 })();

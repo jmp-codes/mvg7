@@ -354,7 +354,7 @@ window.G7 = window.G7 || {};
     });
   }
 
-  function confirmBooking() {
+  async function confirmBooking() {
     const trip = currentTrip();
     const ok = trips.bookable(trip);
     if (!ok.ok) return u.toast(ok.reason, 'err');
@@ -369,11 +369,8 @@ window.G7 = window.G7 || {};
       return draw();
     }
 
-    let ref;
-    do { ref = u.newRef(S.date); } while (store.getBooking(ref));
-
-    const booking = {
-      ref,
+    const build = () => ({
+      ref: u.newRef(S.date),
       tripId: trip.id,
       date: trip.date,
       routeId: trip.routeId,
@@ -383,8 +380,29 @@ window.G7 = window.G7 || {};
       total: S.passengers.reduce((n, p) => n + p.fare, 0),
       payment: { method: S.payment, status: 'unpaid' },
       status: 'confirmed',
-    };
-    store.addBooking(booking);
+    });
+    let booking = build();
+    const btn = $('#confirm', root); if (btn) btn.disabled = true;
+
+    if (G7.cloud && G7.cloud.on) {
+      // Shared database: the server re-checks seats, fares and trip rules and saves in one step
+      let r;
+      for (let i = 0; i < 4; i++) {
+        r = await G7.cloud.createBooking(booking);
+        if (r.ok || !/duplicate|unique/i.test(r.reason)) break;
+        booking = build();   // reference collided: try another
+      }
+      if (!r.ok) {
+        if (btn) btn.disabled = false;
+        u.toast(r.reason, 'err');
+        if (/seat|taken|fare|cancel/i.test(r.reason)) { await G7.cloud.reloadTaken(); S.seats = []; S.step = 2; draw(); }
+        return;
+      }
+      booking = r.booking;
+    } else {
+      do { booking.ref = u.newRef(S.date); } while (store.getBooking(booking.ref));
+      store.addBooking(booking);
+    }
     S.done = booking;
     draw();
   }

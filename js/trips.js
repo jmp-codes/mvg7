@@ -78,6 +78,7 @@ G7.trips = (function () {
     allSeats().forEach(n => (map[n] = { state: 'available' }));
     store.maintenanceSeats().forEach(n => { if (map[n]) map[n] = { state: 'oos' }; });
     trip.blocked.forEach(n => { if (map[n] && map[n].state === 'available') map[n] = { state: 'blocked' }; });
+    store.takenSeats(trip.id).forEach(n => { if (map[n] && map[n].state === 'available') map[n] = { state: 'booked' }; });
     store.bookings()
       .filter(b => b.tripId === trip.id && b.status === 'confirmed')
       .forEach(b => b.passengers.forEach(p => {

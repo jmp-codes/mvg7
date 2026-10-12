@@ -35,7 +35,7 @@ python3 -m http.server 8000     # then visit http://localhost:8000
 | `js/booking.js` | 4-step booking wizard: Choose trip, Pick seats (deck tabs), Passenger details, Review & confirm, then the confirmation ticket |
 | `js/admin.js` | Ticket Office: dashboard, bookings, manifest, trip/seat control, fares, data |
 | `js/home.js` | Landing page (hero, search box, destinations, routes, how it works, footer) |
-| `js/app.js` | Hash router and nav (`#/home`, `#/book`, `#/ticket`, `#/office`) |
+| `js/app.js` | Hash router and nav for the public site (`#/home`, `#/book`, `#/ticket`) |
 
 ## Landing page photos
 
@@ -106,3 +106,14 @@ Click seats to select them (blue), then **Save Changes**.
 
 ## Bookings page (Ticket Office)
 `js/office-bookings.js` + `css/office-bookings.css`: stat cards (click to filter), search, date/status/"More filters" (route, payment method, departure), selectable table with bulk "Export selected (CSV)", row menu, and a Booking Details panel (side panel on wide screens, modal on narrow). Edit Booking changes contact and passenger details only (not seats or fares).
+
+## Two pages, one folder
+- `index.html` - public website (customers): home, booking, ticket lookup.
+- `g7-staff.html` - administrator / ticket office page (staff sign-in). Not linked from the public site; staff bookmark it. Marked noindex; auto sign-out after 15 min idle. Loads `js/office-app.js` instead of the home/router scripts.
+Both sit side by side and share the same data (localStorage). 
+
+## Shared database (Supabase)
+`js/supabase-config.js` holds the Project URL and publishable key (safe to be public). `js/cloud.js` keeps an in-memory copy of the data and writes changes to Supabase; `js/storage.js`/`js/auth.js` use it automatically. Empty config = local demo mode (browser only, not secure). Setup files are in `supabase/` (see `supabase/README.md`).
+- Customers: seats, fares and trip rules are re-checked on the server when a booking is created; ticket lookup needs reference + mobile number.
+- Staff: real sign-in (name + 6-8 digit PIN, or email + password for the first admin). The database enforces roles. Staff are added in the Staff tab (via the `staff-admin` edge function).
+- Receipt numbers continue from the highest used today; two cashiers saving at the exact same instant could in rare cases get the same number.

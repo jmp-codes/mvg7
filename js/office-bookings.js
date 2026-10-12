@@ -205,7 +205,7 @@ G7.officeBookings = (function () {
     [['#f-route', 'route2'], ['#f-pm', 'pm'], ['#f-dep', 'dep']].forEach(([id, k]) => $(id, el).addEventListener('change', e => { F[k] = e.target.value; F.page = 1; syncMore(); table(); }));
     $('#more', el).addEventListener('click', () => { const x = $('#extra', el); x.hidden = !x.hidden; $('#more', el).setAttribute('aria-expanded', String(!x.hidden)); });
     $('#clr', el).addEventListener('click', () => { Object.assign(F, { q: '', fdate: '', status: 'all', route2: 'all', pm: 'all', dep: 'all', page: 1 }); render(el, ctx); });
-    $('#newb', el).addEventListener('click', () => { G7.booking.prefill({}); location.hash = '#/book'; });
+    $('#newb', el).addEventListener('click', () => { location.href = 'index.html#/book'; });
     if (extraCount()) { $('#extra', el).hidden = false; $('#more', el).setAttribute('aria-expanded', 'true'); }
 
     // open details: side panel on wide screens, pop-up otherwise

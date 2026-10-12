@@ -8,7 +8,9 @@ window.G7 = window.G7 || {};
 G7.store = (function () {
   const PREFIX = 'g7.';
 
+  const cloud = () => G7.cloud && G7.cloud.on;
   function get(key, fallback) {
+    if (cloud()) return G7.cloud.read(key, fallback);
     try {
       const raw = localStorage.getItem(PREFIX + key);
       return raw == null ? fallback : JSON.parse(raw);
@@ -18,6 +20,7 @@ G7.store = (function () {
     }
   }
   function set(key, value) {
+    if (cloud()) { G7.cloud.write(key, value); return; }
     try {
       localStorage.setItem(PREFIX + key, JSON.stringify(value));
     } catch (e) {
@@ -89,6 +92,7 @@ G7.store = (function () {
 
   // ---- Staff accounts (Ticket Office). Until staff are edited, one default admin uses config.adminPin ----
   function staff() {
+    if (cloud()) return G7.cloud.staff();
     const v = get('staff', null);
     if (Array.isArray(v) && v.length) return v;
     return [{ id: 'admin', name: 'Administrator', pin: G7.config.adminPin, role: 'admin', active: true }];
@@ -96,7 +100,17 @@ G7.store = (function () {
   function saveStaff(list) { set('staff', list); }
 
   // ---- Receipt numbers: R-YYMMDD-0001, restarting each day ----
+  const issued = {};
   function nextReceiptNo(prefix) {
+    if (cloud()) {
+      // shared database: continue after the highest number already used today
+      const d = new Date(), p2 = x => String(x).padStart(2, '0');
+      const stamp = prefix + '-' + String(d.getFullYear()).slice(2) + p2(d.getMonth() + 1) + p2(d.getDate()) + '-';
+      let max = issued[stamp] || 0;
+      bookings().forEach(b => ((b.payment && b.payment.log) || []).forEach(l => { if (l.no && String(l.no).indexOf(stamp) === 0) max = Math.max(max, parseInt(String(l.no).slice(-4), 10) || 0); }));
+      issued[stamp] = max + 1;
+      return stamp + String(max + 1).padStart(4, '0');
+    }
     const d = new Date(), key = d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
     const seq = get('receiptSeq', {});
     const n = (seq[prefix] && seq[prefix].day === key ? seq[prefix].n : 0) + 1;
@@ -106,13 +120,17 @@ G7.store = (function () {
     return prefix + '-' + String(d.getFullYear()).slice(2) + p2(d.getMonth() + 1) + p2(d.getDate()) + '-' + String(n).padStart(4, '0');
   }
 
+  // Seats already taken on a trip (customer pages only know seat numbers, not names)
+  function takenSeats(tripId) { return cloud() ? G7.cloud.taken(tripId) : []; }
+
   // ---- Maintenance --------------------------------------------------
   function exportAll() {
     return { exportedAt: new Date().toISOString(), bookings: bookings(), trips: tripOverrides(), extraTrips: extraTrips(), customFares: customFares(), maintenance: maintenanceSeats(), farePrices: get('farePrices', {}), staff: staff().map(x => ({ id: x.id, name: x.name, role: x.role, active: x.active !== false })) };
   }
   function resetAll() {
+    if (cloud()) return G7.cloud.resetAll();
     ['bookings', 'trips', 'extraTrips', 'farePrices', 'customFares', 'maintenance', 'receiptSeq'].forEach(k => localStorage.removeItem(PREFIX + k));
   }
 
-  return { staff, saveStaff, nextReceiptNo, bookings, saveBookings, getBooking, addBooking, updateBooking, tripOverride, tripOverrides, setTripOverride, maintenanceSeats, setMaintenanceSeats, extraTrips, addExtraTrip, removeExtraTrip, fares, fareOrder, customFares, saveCustomFares, setFarePrices, exportAll, resetAll };
+  return { takenSeats, staff, saveStaff, nextReceiptNo, bookings, saveBookings, getBooking, addBooking, updateBooking, tripOverride, tripOverrides, setTripOverride, maintenanceSeats, setMaintenanceSeats, extraTrips, addExtraTrip, removeExtraTrip, fares, fareOrder, customFares, saveCustomFares, setFarePrices, exportAll, resetAll };
 })();

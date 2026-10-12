@@ -18,6 +18,7 @@ G7.officePay = (function () {
   const summary = b => { const t = tripOf(b); return `<div class="pay-sum"><div><small>Booking</small><b>${esc(b.ref)}</b><span>${esc(b.contact.name)} · ${b.passengers.length} pax</span><span>${esc(trips.routeLabel(t.route))} · ${u.fmtDate(b.date)} ${u.fmtTime(t.departs)}</span></div><div class="due"><small>Amount due</small><b>${money(b.total)}</b></div></div>`; };
   const fail = r => u.toast(r.reason || 'Something went wrong.', 'err');
   const me = () => auth.me();
+  const CLOUD = !!(G7.cloud && G7.cloud.on);
 
   // ---- Receive payment ------------------------------------------------------
   function receiveModal(ref, done) {
@@ -230,13 +231,15 @@ G7.officePay = (function () {
     const s = id ? auth.find(id) : null;
     const m = u.modal(`<div class="of-modal pay-modal"><h3>${s ? 'Edit staff' : 'Add staff'}</h3>
       <form id="sf"><label>Full name<div class="of-input"><input id="sn" maxlength="40" value="${esc(s ? s.name : '')}" placeholder="e.g. Maria Santos" required></div></label>
-        <label>PIN (4 to 8 digits)<div class="of-input">${icon('lock')}<input id="sp" inputmode="numeric" maxlength="8" value="${esc(s ? s.pin : '')}" placeholder="Used to sign in" required></div></label>
+        <label>PIN (${CLOUD ? '6 to 8' : '4 to 8'} digits)<div class="of-input">${icon('lock')}<input id="sp" inputmode="numeric" maxlength="8" value="${esc(s && !CLOUD ? s.pin : '')}" placeholder="${s && CLOUD ? 'Leave blank to keep the current PIN' : 'Used to sign in'}" ${s && CLOUD ? '' : 'required'}></div></label>
         <label>Role<div class="of-input"><select id="sr"><option value="cashier" ${s && s.role === 'cashier' ? 'selected' : ''}>Cashier — bookings, payments, manifest, trips</option><option value="admin" ${s && s.role === 'admin' ? 'selected' : ''}>Administrator — everything, including staff, fares and data</option></select></div></label>
         <div class="of-mfoot"><span class="sp"></span><button type="button" class="of-btn ghost" id="sx">Cancel</button><button class="of-btn navy">Save</button></div></form></div>`, 'of-mod pay-mod');
     $('#sx', m.el).addEventListener('click', m.close);
-    $('#sf', m.el).addEventListener('submit', e => {
+    $('#sf', m.el).addEventListener('submit', async e => {
       e.preventDefault();
-      const r = auth.save({ name: $('#sn', m.el).value, pin: $('#sp', m.el).value, role: $('#sr', m.el).value }, id);
+      const btn = $('#sf .navy', m.el); btn.disabled = true;
+      const r = await auth.save({ name: $('#sn', m.el).value, pin: $('#sp', m.el).value, role: $('#sr', m.el).value }, id);
+      btn.disabled = false;
       if (!r.ok) return fail(r);
       m.close(); u.toast('Staff saved.', 'ok'); done();
     });
@@ -250,12 +253,12 @@ G7.officePay = (function () {
           <td>${s.active === false ? '<span class="of-pill bad">Inactive</span>' : '<span class="of-pill ok">Active</span>'}</td>
           <td class="acts"><button class="of-btn outline sm" data-edit="${s.id}">${icon('pencil')} Edit</button>
             <button class="of-btn sm ${s.active === false ? '' : 'danger'}" data-toggle="${s.id}">${s.active === false ? 'Activate' : 'Deactivate'}</button></td></tr>`).join('')}</tbody></table></div>
-        <div class="of-info2">${icon('info')}<p>Staff PINs are stored in this browser only. This tells staff apart for the payment records; it is not real security. Deactivated staff can no longer sign in but their past payments stay on record.</p></div></div>`;
+        <div class="of-info2">${icon('info')}<p>${CLOUD ? 'Each staff member signs in with their own name and PIN. PINs cannot be viewed; use Edit to set a new one.' : 'Staff PINs are stored in this browser only. This tells staff apart for the payment records; it is not real security.'} Deactivated staff can no longer sign in but their past payments stay on record.</p></div></div>`;
     const redraw = () => staffTab(el, ctx);
     $('#sadd', el).addEventListener('click', () => staffModal(null, redraw));
     $$('[data-edit]', el).forEach(b => b.addEventListener('click', () => staffModal(b.dataset.edit, redraw)));
-    $$('[data-toggle]', el).forEach(b => b.addEventListener('click', () => {
-      const s = auth.find(b.dataset.toggle), r = auth.setActive(s.id, s.active === false);
+    $$('[data-toggle]', el).forEach(b => b.addEventListener('click', async () => {
+      const s = auth.find(b.dataset.toggle), r = await auth.setActive(s.id, s.active === false);
       if (!r.ok) return fail(r); redraw();
     }));
   }
@@ -264,12 +267,12 @@ G7.officePay = (function () {
   function pinModal() {
     const m = u.modal(`<div class="of-modal pay-modal"><h3>Change my PIN</h3>
       <form id="pnf"><label>Current PIN<div class="of-input">${icon('lock')}<input id="po" type="password" inputmode="numeric" maxlength="8" required></div></label>
-        <label>New PIN (4 to 8 digits)<div class="of-input">${icon('lock')}<input id="pn" type="password" inputmode="numeric" maxlength="8" required></div></label>
+        <label>New PIN (${CLOUD ? '6 to 8' : '4 to 8'} digits)<div class="of-input">${icon('lock')}<input id="pn" type="password" inputmode="numeric" maxlength="8" required></div></label>
         <div class="of-mfoot"><span class="sp"></span><button type="button" class="of-btn ghost" id="pnx">Cancel</button><button class="of-btn navy">Save PIN</button></div></form></div>`, 'of-mod pay-mod');
     $('#pnx', m.el).addEventListener('click', m.close);
-    $('#pnf', m.el).addEventListener('submit', e => {
+    $('#pnf', m.el).addEventListener('submit', async e => {
       e.preventDefault();
-      const r = auth.changeOwnPin($('#po', m.el).value, $('#pn', m.el).value);
+      const r = await auth.changeOwnPin($('#po', m.el).value, $('#pn', m.el).value);
       if (!r.ok) return fail(r); m.close(); u.toast('PIN changed.', 'ok');
     });
   }

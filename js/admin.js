@@ -36,27 +36,49 @@ window.G7 = window.G7 || {};
     authed() ? draw() : login();
   }
 
-  function login() {
+  async function login() {
     document.body.classList.remove('is-office-app');
-    const staff = auth.active();
+    root.innerHTML = '<div class="of-login"><div class="of-login-card"><header><div><h2>Ticket Office</h2><p>Loading…</p></div></header></div></div>';
+    let staff = [];
+    try { staff = await auth.loginOptions(); } catch (e) { console.error(e); u.toast('Cannot reach the server.', 'err'); }
+    const cloud = !!(G7.cloud && G7.cloud.on);
+    // staff created in the app sign in by name; the first administrator (real email) uses the email option
+    const opts = staff.map(x => `<option value="${esc(x.id)}" data-email="${esc(x.email)}">${esc(x.name)}</option>`).join('')
+      + (cloud ? '<option value="__email">Sign in with email…</option>' : '');
     root.innerHTML = `<div class="of-login"><div class="of-login-card">
-      <header><div><h2>Ticket Office</h2><p>Staff only. Choose your name and enter your PIN.</p></div><span class="of-login-ic">${icon('ticket')}</span></header>
+      <header><div><h2>Ticket Office</h2><p>Staff only. ${cloud ? 'Choose your name and enter your PIN.' : 'Choose your name and enter your PIN.'}</p></div><span class="of-login-ic">${icon('ticket')}</span></header>
       <form id="login"><label>Staff
-        <div class="of-input">${icon('user')}<select id="who">${staff.map(x => `<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></div></label>
-        <label>PIN
-        <div class="of-input">${icon('lock')}<input type="password" id="pin" placeholder="Enter your PIN" autocomplete="off" inputmode="numeric" required></div></label>
+        <div class="of-input">${icon('user')}<select id="who">${opts}</select></div></label>
+        <label id="emlab" hidden>Email
+        <div class="of-input">${icon('user')}<input type="email" id="em" placeholder="you@example.com" autocomplete="username"></div></label>
+        <label><span id="pinlab">PIN</span>
+        <div class="of-input">${icon('lock')}<input type="password" id="pin" placeholder="Enter your PIN" autocomplete="current-password" required></div></label>
         <button class="of-btn teal">${icon('login')} Sign in</button></form>
       <div class="of-divider">${icon('shield')}</div>
       <div class="of-info">${icon('info')}<p>This area is restricted to authorized ticket office staff only. Please keep your PIN confidential.</p></div>
     </div></div>`;
-    $('#login', root).addEventListener('submit', e => {
+    const who = $('#who', root);
+    const sync = () => {
+      const o = who.options[who.selectedIndex];
+      const needEmail = cloud && o && (o.value === '__email' || !o.dataset.email);
+      $('#emlab', root).hidden = !needEmail;
+      $('#em', root).required = !!needEmail;
+      $('#pinlab', root).textContent = needEmail ? 'Password' : 'PIN';
+    };
+    who.addEventListener('change', sync); sync();
+    $('#login', root).addEventListener('submit', async e => {
       e.preventDefault();
-      if (auth.login($('#who').value, $('#pin').value)) { tab = 'dashboard'; draw(); }
-      else { u.toast('Wrong PIN.', 'err'); $('#pin').value = ''; $('#pin').focus(); }
+      const o = who.options[who.selectedIndex], btn = $('#login .of-btn', root);
+      btn.disabled = true;
+      let ok = null;
+      try { ok = await auth.login(who.value, $('#pin').value, cloud ? (o.dataset.email || $('#em').value) : ''); } catch (err) { console.error(err); }
+      btn.disabled = false;
+      if (ok) { tab = 'dashboard'; draw(); }
+      else { u.toast('Wrong PIN or password.', 'err'); $('#pin').value = ''; $('#pin').focus(); }
     });
   }
 
-  const BRAND = `<a class="brand" href="#/home" aria-label="G7 Marine Transport home">
+  const BRAND = `<a class="brand" href="index.html#/home" aria-label="G7 Marine Transport home">
       <svg class="logo-mark" viewBox="0 0 80 40" aria-hidden="true"><path d="M2 30c10-8 18-8 28-2s20 6 30-2" fill="none" stroke="#1b8fc7" stroke-width="3" stroke-linecap="round"/><path d="M6 35c10-6 18-6 28-1s20 5 32-1" fill="none" stroke="#0a2f7a" stroke-width="2" stroke-linecap="round"/><text x="26" y="26" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="26" fill="#0a2f7a">G7</text></svg>
       <span class="brand-text"><b>G7 MARINE</b><b>TRANSPORT</b></span>
       <img class="logo-img" src="assets/logo-white.png" alt="G7 Marine Transport" onload="this.parentNode.classList.add('has-logo')" onerror="this.remove()"></a>`;
@@ -66,11 +88,11 @@ window.G7 = window.G7 || {};
     root.innerHTML = `<div class="os">
       <aside class="os-side no-print">${BRAND}<div class="os-label">TICKET OFFICE</div>
         <nav>${tabsFor().map(([k, t, ic]) => `<button class="os-link ${k === tab ? 'on' : ''}" data-tab="${k}">${icon(ic)}${t}</button>`).join('')}</nav>
-        <div class="os-foot"><div class="os-acct"><div class="os-menu" id="acct-menu" hidden><a href="#" id="chpin">${icon('lock')} Change my PIN</a><a href="#/home">${icon('home')} Back to website</a></div>
+        <div class="os-foot"><div class="os-acct"><div class="os-menu" id="acct-menu" hidden><a href="#" id="chpin">${icon('lock')} Change my PIN</a><a href="index.html#/home">${icon('home')} Back to website</a></div>
           <button class="os-acct-btn" id="acct" aria-haspopup="true"><span class="of-avatar">${icon('user')}</span><span class="who"><b>${esc(auth.me().name)}</b><small>${auth.me().role === 'admin' ? 'Administrator' : 'Cashier'}</small></span> <span class="sp"></span>${icon('chevdown')}</button></div>
           <button class="os-signout" id="logout">${icon('logout')} Sign out</button></div></aside>
       <div class="os-main"><div class="of os-body" id="tab-body"></div></div></div>`;
-    $$('[data-tab]', root).forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; draw(); }));
+    $$('[data-tab]', root).forEach(b => b.addEventListener('click', async () => { tab = b.dataset.tab; if (G7.cloud && G7.cloud.on) await G7.cloud.refreshBookings(); draw(); }));
     $('#acct', root).addEventListener('click', e => { e.stopPropagation(); const m = $('#acct-menu', root); m.hidden = !m.hidden; });
     document.addEventListener('click', function close(e) {
       const m = $('#acct-menu', root);
@@ -78,7 +100,7 @@ window.G7 = window.G7 || {};
       if (!e.target.closest || !e.target.closest('.os-acct')) m.hidden = true;
     });
     $('#chpin', root).addEventListener('click', e => { e.preventDefault(); $('#acct-menu', root).hidden = true; G7.officePay.pinModal(); });
-    $('#logout', root).addEventListener('click', () => { auth.logout(); login(); });
+    $('#logout', root).addEventListener('click', async () => { await auth.logout(); login(); });
     if (!tabsFor().some(t => t[0] === tab)) tab = 'dashboard';
     const ctx = { head, F, pager, openPop, bindPopClose, payPill, dateInput };
     ({ dashboard, bookings: el => G7.officeBookings.render(el, ctx), manifest, trips: tripsTab, fares, data, payments: el => G7.officePay.paymentsTab(el, ctx), staff: el => G7.officePay.staffTab(el, ctx) })[tab]($('#tab-body', root));
@@ -615,14 +637,14 @@ window.G7 = window.G7 || {};
     const pax = bks.filter(b => b.status === 'confirmed').reduce((n, b) => n + b.passengers.length, 0);
     const used = storageBytes(), LIMIT = 5 * 1048576, pct = Math.min(100, Math.round(used / LIMIT * 100));
 
-    el.innerHTML = `${head('database', 'Data Management', 'Export, import, and manage booking data. All data is stored locally on this computer.')}
+    el.innerHTML = `${head('database', 'Data Management', 'Export, import, and manage booking data. ' + ((G7.cloud && G7.cloud.on) ? 'Data is stored in the shared G7 database.' : 'All data is stored locally on this computer.'))}
       <div class="of-data">
         <div class="of-dcard blue"><span class="of-circ blue">${icon('file')}</span><h3>Export Bookings (CSV)</h3><p>Download all booking records in CSV format. You can open this file in Excel or other spreadsheet software.</p>${ART.csv}<button class="of-btn solid blue" id="csv">${icon('download')} Export as CSV</button></div>
         <div class="of-dcard green"><span class="of-circ green">${icon('database')}</span><h3>Download Full Backup (JSON)</h3><p>Download a complete backup of all system data (bookings, trips, fares, etc.) in JSON format.</p>${ART.json}<button class="of-btn solid green" id="json">${icon('download')} Download Backup</button></div>
-        <div class="of-dcard purple"><span class="of-circ purple">${icon('upload')}</span><h3>Load Sample Bookings (Testing)</h3><p>Import sample booking records for testing and demonstration purposes. They are added to your current data.</p>${ART.sample}<button class="of-btn solid purple" id="sample">${icon('upload')} Load Sample Data</button></div>
+        ${(G7.cloud && G7.cloud.on) ? '' : `<div class="of-dcard purple"><span class="of-circ purple">${icon('upload')}</span><h3>Load Sample Bookings (Testing)</h3><p>Import sample booking records for testing and demonstration purposes. They are added to your current data.</p>${ART.sample}<button class="of-btn solid purple" id="sample">${icon('upload')} Load Sample Data</button></div>`}
         <div class="of-dcard red"><span class="of-circ red">${icon('trash')}</span><h3>Erase All Data</h3><p>Permanently delete all bookings, trips, fares, and other data stored in this computer. <b>This action cannot be undone.</b></p>${ART.erase}<button class="of-btn solid red" id="reset">${icon('trash')} Erase All Data</button></div>
         <aside class="of-dcard info"><h4><span class="of-circ-ic">${icon('info')}</span> Data Information</h4><ul class="chk">
-          <li>All data is stored locally in this browser (computer) using localStorage.</li><li>Back up your data regularly to prevent accidental loss.</li>
+          <li>${(G7.cloud && G7.cloud.on) ? 'All data is stored in the shared G7 database, so every staff device sees the same bookings.' : 'All data is stored locally in this browser (computer) using localStorage.'}</li><li>Back up your data regularly to prevent accidental loss.</li>
           <li>Sample data is for testing only and can be removed anytime.</li><li>The erase option will permanently delete all data. Make sure to create a backup before proceeding.</li></ul></aside>
       </div>
       <div class="of-dlow">
@@ -649,9 +671,9 @@ window.G7 = window.G7 || {};
       u.download('g7-bookings.csv', lines.join('\n'), 'text/csv');
     });
     $('#json', el).addEventListener('click', () => u.download('g7-backup.json', JSON.stringify(store.exportAll(), null, 2), 'application/json'));
-    $('#sample', el).addEventListener('click', () => { const n = sampleData(); u.toast(n + ' sample bookings added.', 'ok'); data(el); });
-    $('#reset', el).addEventListener('click', () => {
-      if (confirm('Erase ALL bookings, trip changes and fare changes? This cannot be undone.')) { store.resetAll(); u.toast('All data erased.', 'ok'); data(el); }
+    if ($('#sample', el)) $('#sample', el).addEventListener('click', () => { const n = sampleData(); u.toast(n + ' sample bookings added.', 'ok'); data(el); });
+    $('#reset', el).addEventListener('click', async () => {
+      if (confirm('Erase ALL bookings, trip changes and fare changes? This cannot be undone.')) { try { await store.resetAll(); u.toast('All data erased.', 'ok'); } catch (e) { u.toast('Could not erase: ' + (e.message || e), 'err'); } data(el); }
     });
   }
 

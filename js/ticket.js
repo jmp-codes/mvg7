@@ -83,7 +83,8 @@ G7.ticket = (function () {
   }
 
   // Returns the booking when ref + phone (last 7 digits) match, else null
-  function find(ref, phone) {
+  async function find(ref, phone) {
+    if (G7.cloud && G7.cloud.on) return await G7.cloud.lookup(ref, phone);
     const b = store.getBooking(ref);
     const digits = s => String(s || '').replace(/\D/g, '');
     if (!b || digits(b.contact.phone).slice(-7) !== digits(phone).slice(-7)) return null;
@@ -107,9 +108,9 @@ G7.ticket = (function () {
       </form>
       <div id="lookup-result"></div></div></div></div>`;
 
-    u.$('#lookup-form', root).addEventListener('submit', e => {
+    u.$('#lookup-form', root).addEventListener('submit', async e => {
       e.preventDefault();
-      const b = find(u.$('#lk-ref').value, u.$('#lk-phone').value);
+      const b = await find(u.$('#lk-ref').value, u.$('#lk-phone').value);
       const out = u.$('#lookup-result', root);
       if (!b) { out.innerHTML = '<p class="msg err">No booking found with those details.</p>'; return; }
       out.innerHTML = bookingHTML(b);
