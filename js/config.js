@@ -149,9 +149,9 @@ window.G7 = window.G7 || {};
 
     // Default fares (editable in Ticket Office -> Fares)
     fares: {
-      regular: { label: 'Regular', price: 780, seat: true, note: '' },
-      student: { label: 'Student', price: 670, seat: true, note: 'Valid student ID required at boarding' },
-      senior_pwd: { label: 'Senior / PWD', price: 650, seat: true, note: 'Valid Senior/PWD ID required at boarding' },
+      regular: { label: 'Regular', price: 780, seat: true, adult: true, note: '' },
+      student: { label: 'Student', price: 670, seat: true, adult: true, note: 'Valid student ID required at boarding' },
+      senior_pwd: { label: 'Senior / PWD', price: 650, seat: true, adult: true, note: 'Valid Senior/PWD ID required at boarding' },
       child: { label: 'Child', price: 500, seat: true, note: 'Age range per company policy' },
       infant: { label: 'Infant', price: 200, seat: false, note: 'Rides on an adult\'s lap, no seat assigned' },
     },

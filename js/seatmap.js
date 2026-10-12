@@ -41,10 +41,10 @@ G7.seatmap = (function () {
         } else {
           const info = map[c] || { state: 'available' };
           let state = info.state;
-          if (sel.has(c) && state === 'available') state = 'selected';
+          if (sel.has(c) && (state === 'available' || (mode === 'admin' && state !== 'booked'))) state = 'selected';
           const clickable =
             mode === 'book' ? (state === 'available' || state === 'selected')
-            : mode === 'admin' ? (state === 'available' || state === 'blocked')
+            : mode === 'admin' ? state !== 'booked'
             : false;
           let title = 'Seat ' + c;
           if (state === 'booked' && mode === 'admin') title += ' - ' + (info.name || '') + ' (' + (info.ref || '') + ')';
@@ -69,8 +69,8 @@ G7.seatmap = (function () {
     const secs = opts.section ? G7.config.sections.filter(s => s.id === opts.section) : G7.config.sections;
 
     let html = `<div class="seatmap ${opts.section ? 'single' : ''}">` + secs.map(s => sectionHTML(s, map, sel, mode, !opts.section)).join('') + '</div>';
-    if (!opts.section || opts.section === 'upper') html += '<div class="sm-stern">↓ STERN (Back)</div>';
-    html += '<div class="legend">' + LEGEND.map(([k, t]) => `<span><i class="seat-chip ${k}"></i>${t}</span>`).join('') + '</div>';
+    if (opts.stern !== false && (!opts.section || opts.section === 'upper')) html += '<div class="sm-stern">↓ STERN (Back)</div>';
+    if (opts.legend !== false) html += '<div class="legend">' + LEGEND.map(([k, t]) => `<span><i class="seat-chip ${k}"></i>${t}</span>`).join('') + '</div>';
 
     container.innerHTML = html;
     container.onclick = function (e) {

@@ -61,6 +61,7 @@ window.G7 = window.G7 || {};
     chevleft: '<path d="M15 6l-6 6 6 6"/>',
     chevright: '<path d="M9 6l6 6-6 6"/>',
     file: '<path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5"/>',
+    wrench: '<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.7 2.7-2.4-.6-.6-2.4z"/>',
     list: '<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/>',
   };
   G7.icons = P;

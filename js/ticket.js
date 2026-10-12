@@ -25,8 +25,8 @@ G7.ticket = (function () {
     const payLabel = config.paymentMethods[b.payment.method] || b.payment.method;
 
     const rows = b.passengers.map((p, i) => {
-      const f = config.fares[p.fareType];
-      return `<tr><td>${i + 1}</td><td>${esc(p.name)}</td><td>${esc(f ? f.label : p.fareType)}</td><td>${p.seat ? p.seat : 'Lap infant'}</td><td class="num">${u.money(p.fare)}</td></tr>`;
+      const f = store.fares()[p.fareType];
+      return `<tr><td>${i + 1}</td><td>${esc(p.name)}</td><td>${esc(p.fareLabel || (f ? f.label : p.fareType))}</td><td>${p.seat ? p.seat : 'Lap infant'}</td><td class="num">${u.money(p.fare)}</td></tr>`;
     }).join('');
 
     const banner = opts.confirmed ? `<div class="tk-banner">

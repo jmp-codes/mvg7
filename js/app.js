@@ -32,6 +32,7 @@
     // Same page, different section: just scroll, don't rebuild the page
     if (name === 'home' && lastView === 'home' && section) return scrollToSection(section);
 
+    document.body.classList.remove('is-office-app'); // set again by the Ticket Office when signed in
     const main = u.$('#view');
     try {
       G7.views[name].render(main);

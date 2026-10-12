@@ -59,6 +59,10 @@ G7.store = (function () {
     return all[id];
   }
 
+  // ---- Seats out of service (maintenance). Defaults to config.outOfService until changed in the office ----
+  function maintenanceSeats() { const v = get('maintenance', null); return Array.isArray(v) ? v : G7.config.outOfService.slice(); }
+  function setMaintenanceSeats(list) { set('maintenance', list); }
+
   // ---- Extra trips added by the Ticket Office (beyond the default daily schedule) ----
   function extraTrips() { return get('extraTrips', []); }
   function addExtraTrip(t) { const l = extraTrips(); l.push(t); set('extraTrips', l); return t; }
@@ -67,7 +71,9 @@ G7.store = (function () {
     const all = tripOverrides(); delete all[id]; set('trips', all);
   }
 
-  // ---- Fares (only prices are overridable) ----------------------------
+  // ---- Fares: built-in categories (price overridable) + custom categories added in the office ----
+  function customFares() { return get('customFares', []); }
+  function saveCustomFares(list) { set('customFares', list); }
   function fares() {
     const saved = get('farePrices', {});
     const out = {};
@@ -75,17 +81,19 @@ G7.store = (function () {
       out[id] = Object.assign({ id }, G7.config.fares[id]);
       if (saved[id] != null) out[id].price = Number(saved[id]);
     });
+    customFares().forEach(f => { out[f.id] = Object.assign({ custom: true, seat: true }, f); });
     return out;
   }
+  function fareOrder() { return G7.config.fareOrder.concat(customFares().map(f => f.id)); }
   function setFarePrices(map) { set('farePrices', map); }
 
   // ---- Maintenance --------------------------------------------------
   function exportAll() {
-    return { exportedAt: new Date().toISOString(), bookings: bookings(), trips: tripOverrides(), extraTrips: extraTrips(), farePrices: get('farePrices', {}) };
+    return { exportedAt: new Date().toISOString(), bookings: bookings(), trips: tripOverrides(), extraTrips: extraTrips(), customFares: customFares(), maintenance: maintenanceSeats(), farePrices: get('farePrices', {}) };
   }
   function resetAll() {
-    ['bookings', 'trips', 'extraTrips', 'farePrices'].forEach(k => localStorage.removeItem(PREFIX + k));
+    ['bookings', 'trips', 'extraTrips', 'farePrices', 'customFares', 'maintenance'].forEach(k => localStorage.removeItem(PREFIX + k));
   }
 
-  return { bookings, saveBookings, getBooking, addBooking, updateBooking, tripOverride, tripOverrides, setTripOverride, extraTrips, addExtraTrip, removeExtraTrip, fares, setFarePrices, exportAll, resetAll };
+  return { bookings, saveBookings, getBooking, addBooking, updateBooking, tripOverride, tripOverrides, setTripOverride, maintenanceSeats, setMaintenanceSeats, extraTrips, addExtraTrip, removeExtraTrip, fares, fareOrder, customFares, saveCustomFares, setFarePrices, exportAll, resetAll };
 })();

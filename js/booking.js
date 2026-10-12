@@ -23,7 +23,7 @@ window.G7 = window.G7 || {};
 
   function fresh() {
     const counts = {};
-    config.fareOrder.forEach(f => (counts[f] = 0));
+    store.fareOrder().forEach(f => (counts[f] = 0));
     counts.regular = 1;
     return {
       step: 1,
@@ -42,10 +42,10 @@ window.G7 = window.G7 || {};
   }
 
   // ---- derived values -------------------------------------------------
-  const totalPax = () => config.fareOrder.reduce((n, f) => n + S.counts[f], 0);
-  const seatedPax = () => config.fareOrder.reduce((n, f) => n + (config.fares[f].seat ? S.counts[f] : 0), 0);
-  const infants = () => config.fareOrder.reduce((n, f) => n + (config.fares[f].seat ? 0 : S.counts[f]), 0);
-  const adults = () => S.counts.regular + S.counts.student + S.counts.senior_pwd;
+  const totalPax = () => store.fareOrder().reduce((n, f) => n + (S.counts[f] || 0), 0);
+  const seatedPax = () => { const F = store.fares(); return store.fareOrder().reduce((n, f) => n + (F[f].seat ? (S.counts[f] || 0) : 0), 0); };
+  const infants = () => { const F = store.fares(); return store.fareOrder().reduce((n, f) => n + (F[f].seat ? 0 : (S.counts[f] || 0)), 0); };
+  const adults = () => { const F = store.fares(); return store.fareOrder().reduce((n, f) => n + (F[f].adult ? (S.counts[f] || 0) : 0), 0); };
   // The selected trip; falls back to a trip of the chosen route (or the first one) on that date
   function currentTrip() {
     const list = trips.forDate(S.date);
@@ -58,7 +58,7 @@ window.G7 = window.G7 || {};
 
   function totalPrice() {
     const fares = store.fares();
-    return config.fareOrder.reduce((n, f) => n + S.counts[f] * fares[f].price, 0);
+    return store.fareOrder().reduce((n, f) => n + (S.counts[f] || 0) * fares[f].price, 0);
   }
 
   // Builds passenger rows in fare order; seats go to seated passengers in click order.
@@ -67,12 +67,13 @@ window.G7 = window.G7 || {};
     const old = S.passengers;
     const list = [];
     let seatIdx = 0;
-    config.fareOrder.forEach(f => {
-      for (let i = 0; i < S.counts[f]; i++) {
+    store.fareOrder().forEach(f => {
+      for (let i = 0; i < (S.counts[f] || 0); i++) {
         const prev = old[list.length];
         const same = prev && prev.fareType === f;
         list.push({
           fareType: f,
+          fareLabel: fares[f].label,
           fare: fares[f].price,
           seat: fares[f].seat ? S.seats[seatIdx++] : null,
           name: same ? prev.name : '',
@@ -171,13 +172,13 @@ window.G7 = window.G7 || {};
       </label>`;
     }).join('');
 
-    const counters = config.fareOrder.map(f => `
+    const counters = store.fareOrder().map(f => `
       <div class="bk-count">
         <div><b>${esc(fares[f].label)}</b><small>${esc(fares[f].note || (fares[f].seat ? 'Seat assigned' : 'No seat'))}</small></div>
         <span class="bk-price">${u.money(fares[f].price)}</span>
         <div class="bk-stepper">
           <button type="button" data-dec="${f}" aria-label="Fewer ${esc(fares[f].label)}">−</button>
-          <output>${S.counts[f]}</output>
+          <output>${S.counts[f] || 0}</output>
           <button type="button" data-inc="${f}" aria-label="More ${esc(fares[f].label)}">+</button>
         </div>
       </div>`).join('');
@@ -198,7 +199,7 @@ window.G7 = window.G7 || {};
     $$('input[name=route]', el).forEach(r => r.addEventListener('change', e => { S.tripId = e.target.value; S.seats = []; draw(); }));
     $$('[data-inc]', el).forEach(b => b.addEventListener('click', () => {
       if (totalPax() >= config.maxPassengersPerBooking) return u.toast('Maximum ' + config.maxPassengersPerBooking + ' passengers per booking.', 'err');
-      S.counts[b.dataset.inc]++; S.seats = []; draw();
+      S.counts[b.dataset.inc] = (S.counts[b.dataset.inc] || 0) + 1; S.seats = []; draw();
     }));
     $$('[data-dec]', el).forEach(b => b.addEventListener('click', () => { if (S.counts[b.dataset.dec] > 0) { S.counts[b.dataset.dec]--; S.seats = []; draw(); } }));
 

@@ -9,12 +9,12 @@ window.G7 = window.G7 || {};
   const { esc, $, $$ } = u;
 
   const TABS = [
-    ['dashboard', 'Dashboard', 'chart'],
+    ['dashboard', 'Dashboard', 'home'],
     ['bookings', 'Bookings', 'calendar'],
     ['manifest', 'Manifest', 'people'],
     ['trips', 'Trips & Seats', 'ship'],
     ['fares', 'Fares', 'tag'],
-    ['data', 'Data', 'file'],
+    ['data', 'Data Management', 'database'],
   ];
 
   let root = null;
@@ -22,7 +22,7 @@ window.G7 = window.G7 || {};
   const F = {
     date: u.today(), routeId: config.routes[0].id,
     q: '', fdate: '', status: 'all', page: 1, size: 10, sort: { key: 'created', dir: -1 },
-    mtrip: '', tdate: '', troute: 'all', tstatus: 'all', tq: '', tpage: 1, mq: '',
+    mtrip: '', tsort: 'asc', mpage: 1, msort: { key: 'seat', dir: 1 }, tdate: '', troute: 'all', tstatus: 'all', tq: '', tpage: 1, mq: '',
   };
 
   const authed = () => sessionStorage.getItem('g7.admin') === '1';
@@ -33,6 +33,7 @@ window.G7 = window.G7 || {};
   }
 
   function login() {
+    document.body.classList.remove('is-office-app');
     root.innerHTML = `<div class="of-login"><div class="of-login-card">
       <header><div><h2>Ticket Office</h2><p>Staff only. Enter the office PIN to continue.</p></div><span class="of-login-ic">${icon('ticket')}</span></header>
       <form id="login"><label>PIN
@@ -48,13 +49,27 @@ window.G7 = window.G7 || {};
     });
   }
 
+  const BRAND = `<a class="brand" href="#/home" aria-label="G7 Marine Transport home">
+      <svg class="logo-mark" viewBox="0 0 80 40" aria-hidden="true"><path d="M2 30c10-8 18-8 28-2s20 6 30-2" fill="none" stroke="#1b8fc7" stroke-width="3" stroke-linecap="round"/><path d="M6 35c10-6 18-6 28-1s20 5 32-1" fill="none" stroke="#0a2f7a" stroke-width="2" stroke-linecap="round"/><text x="26" y="26" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="26" fill="#0a2f7a">G7</text></svg>
+      <span class="brand-text"><b>G7 MARINE</b><b>TRANSPORT</b></span>
+      <img class="logo-img" src="assets/logo-white.png" alt="G7 Marine Transport" onload="this.parentNode.classList.add('has-logo')" onerror="this.remove()"></a>`;
+
   function draw() {
-    root.innerHTML = `<div class="of no-print-wrap"><div class="of-bar no-print">
-      <nav class="of-tabs">${TABS.map(([k, t, ic]) => `<button class="of-tab ${k === tab ? 'on' : ''}" data-tab="${k}">${icon(ic)}${t}</button>`).join('')}</nav>
-      <div class="of-account"><span class="of-avatar">${icon('user')}</span><div><b>Staff Account</b><small>Ticket Office</small></div>
-      <button class="of-btn ghost" id="logout">Sign out ${icon('logout')}</button></div></div>
-      <div id="tab-body"></div></div>`;
+    document.body.classList.add('is-office-app'); // sidebar layout replaces the public header
+    root.innerHTML = `<div class="os">
+      <aside class="os-side no-print">${BRAND}<div class="os-label">TICKET OFFICE</div>
+        <nav>${TABS.map(([k, t, ic]) => `<button class="os-link ${k === tab ? 'on' : ''}" data-tab="${k}">${icon(ic)}${t}</button>`).join('')}</nav>
+        <div class="os-foot"><div class="os-acct"><div class="os-menu" id="acct-menu" hidden><a href="#/home">${icon('home')} Back to website</a></div>
+          <button class="os-acct-btn" id="acct" aria-haspopup="true"><span class="of-avatar">${icon('user')}</span>Staff Account <span class="sp"></span>${icon('chevdown')}</button></div>
+          <button class="os-signout" id="logout">${icon('logout')} Sign out</button></div></aside>
+      <div class="os-main"><div class="of os-body" id="tab-body"></div></div></div>`;
     $$('[data-tab]', root).forEach(b => b.addEventListener('click', () => { tab = b.dataset.tab; draw(); }));
+    $('#acct', root).addEventListener('click', e => { e.stopPropagation(); const m = $('#acct-menu', root); m.hidden = !m.hidden; });
+    document.addEventListener('click', function close(e) {
+      const m = $('#acct-menu', root);
+      if (!m) return document.removeEventListener('click', close);
+      if (!e.target.closest || !e.target.closest('.os-acct')) m.hidden = true;
+    });
     $('#logout', root).addEventListener('click', () => { sessionStorage.removeItem('g7.admin'); login(); });
     ({ dashboard, bookings, manifest, trips: tripsTab, fares, data })[tab]($('#tab-body', root));
   }
@@ -64,7 +79,24 @@ window.G7 = window.G7 || {};
   const tripLabel = t => trips.routeLabel(t.route) + ' (' + u.fmtTime(t.departs) + ')';
   const confirmedFor = tid => store.bookings().filter(b => b.tripId === tid && b.status === 'confirmed');
   const paxCount = list => list.reduce((n, b) => n + b.passengers.length, 0);
-  const head = (ic, title, sub, right) => `<header class="of-head">${icon(ic, 'of-head-ic')}<div><h2>${title}</h2><p>${sub}</p></div>${right ? `<div class="of-head-r">${right}</div>` : ''}</header>`;
+  const todayPill = () => `<div class="od-date static">${icon('calendarcheck')}<div><b>Today</b><small>${u.fmtDate(u.today())}</small></div></div>`;
+  const head = (ic, title, sub, right) => `<header class="od-head op"><div class="op-t">${icon(ic, 'op-ic')}<div><h2>${title}</h2><p>${sub}</p></div></div><div class="op-r">${todayPill()}${right || ''}</div></header>`;
+  let popBound = false; // one global listener closes any open row menu
+  function bindPopClose() {
+    if (popBound) return;
+    popBound = true;
+    document.addEventListener('click', e => {
+      if (!e.target.closest || !e.target.closest('[data-kebab],.of-pop')) $$('.of-pop').forEach(x => x.remove());
+    });
+  }
+  // Opens a small menu inside cell td. items: [{act, label, icon, danger}]
+  function openPop(td, ref, items) {
+    $$('.of-pop').forEach(x => x.remove());
+    const pop = document.createElement('div');
+    pop.className = 'of-pop';
+    pop.innerHTML = items.map(it => `<button class="${it.danger ? 'danger' : ''}" data-act="${it.act}" data-ref="${esc(ref)}">${icon(it.icon)} ${it.label}</button>`).join('');
+    td.appendChild(pop);
+  }
   const dateInput = (id, val, min) => `<div class="of-input">${icon('calendar')}<input type="date" id="${id}" value="${val}"></div>`;
 
   function pager(total, page, size, prefix) {
@@ -79,51 +111,52 @@ window.G7 = window.G7 || {};
   }
 
   // ---- dashboard ---------------------------------------------------------
+  const dayStats = date => {
+    const ts = trips.forDate(date);
+    const list = [];
+    ts.forEach(t => confirmedFor(t.id).forEach(b => list.push(b)));
+    return { trips: ts, bookings: list.length, pax: paxCount(list), sales: list.reduce((n, b) => n + b.total, 0) };
+  };
+  function delta(now, before, money) {
+    const d = now - before;
+    if (d === 0) return '<span class="flat">Same as yesterday</span>';
+    const up = d > 0, arrow = up ? '↑' : '↓';
+    const pct = before > 0 ? Math.round(Math.abs(d) / before * 100) + '%' : '';
+    const amt = money ? (before > 0 ? pct : u.money(Math.abs(d))) : Math.abs(d);
+    return `<span class="${up ? 'up' : 'down'}">${arrow} ${amt} ${up ? '' : 'less '}from yesterday</span>`;
+  }
+
   function dashboard(el) {
-    el.innerHTML = `${head('chart', 'Dashboard', 'Welcome! Here\'s an overview of today\'s operations.')}
-      <div class="of-filters slim"><label class="of-lab">${icon('calendar')} Date</label>${dateInput('d', F.date)}
-      <span class="sp"></span><button class="of-btn ghost" id="refresh">${icon('refresh')} Refresh</button></div>
-      <div id="stats"></div>`;
-    $('#d', el).addEventListener('change', e => { F.date = e.target.value || u.today(); dashboard(el); });
-    $('#refresh', el).addEventListener('click', () => dashboard(el));
+    const day = dayStats(F.date), prev = dayStats(u.addDays(F.date, -1));
+    const isToday = F.date === u.today();
+    const recent = store.bookings().slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 4);
 
-    let rev = 0, paid = 0, pax = 0;
-    const cards = trips.forDate(F.date).map((t, idx) => {
-      const r = t.route;
-      const list = confirmedFor(t.id);
-      const cap = trips.sellableCount(t);
-      const sold = cap - trips.availableCount(t);
-      const total = list.reduce((n, b) => n + b.total, 0);
-      const paidAmt = list.filter(b => b.payment.status === 'paid').reduce((n, b) => n + b.total, 0);
-      rev += total; paid += paidAmt; pax += paxCount(list);
-      const pct = cap ? Math.round((sold / cap) * 100) : 0;
-      const back = r.id !== config.routes[0].id;
-      const badge = t.cancelled ? '<span class="of-badge bad">CANCELLED</span>' : t.extra ? '<span class="of-badge gold">EXTRA TRIP</span>' : `<span class="of-badge ${back ? 'ok' : ''}">${back ? 'RETURNING' : 'DEPARTING'}</span>`;
-      return `<article class="of-trip ${back ? 'alt' : ''}">
-        <header><span class="of-circ">${icon('ship')}</span><div><h3>${esc(trips.routeLabel(r))}</h3><p>Departs at ${u.fmtTime(t.departs)}</p></div>${badge}</header>
-        <div class="of-prog"><i style="width:${pct}%"></i></div>
-        <div class="of-prog-t"><b>${sold} / ${cap} seats occupied</b><span>${paxCount(list)} passengers · ${list.length} bookings</span></div>
-        <div class="of-tiles">
-          <div>${icon('seat')}<small>Total Seats</small><b>${cap}</b></div>
-          <div>${icon('people')}<small>Passengers</small><b>${paxCount(list)}</b></div>
-          <div>${icon('doc')}<small>Bookings</small><b>${list.length}</b></div>
-        </div>
-        <footer><span>Sales <b>${u.money(total)}</b> (collected ${u.money(paidAmt)})</span>
-        <button class="of-btn outline" data-view="${t.id}">View Details ${icon('arrow')}</button></footer></article>`;
-    }).join('');
-
-    $('#stats', el).innerHTML = `<section class="of-band">
-        <div><span class="of-circ blue">${icon('coins')}</span><div><small>Total Sales</small><strong>${u.money(rev)}</strong><em>${u.fmtDate(F.date)}</em></div></div>
-        <div><span class="of-circ green">${icon('card')}</span><div><small>Collected</small><b>${u.money(paid)}</b></div></div>
-        <div><span class="of-circ gold">${icon('clock')}</span><div><small>Outstanding</small><b>${u.money(rev - paid)}</b></div></div>
-        <div><span class="of-circ pale">${icon('people')}</span><div><small>Total Passengers</small><b>${pax}</b></div></div>
+    el.innerHTML = `<header class="od-head"><div><small class="eyebrow">TICKET OFFICE</small><h2>Dashboard</h2><p>Overview of ticketing operations, trips, and bookings.</p></div>
+        <label class="od-date no-print">${icon('calendarcheck')}<div><b>${isToday ? 'Today' : 'Selected date'}</b><small>${u.fmtDate(F.date)}</small></div>${icon('chevdown')}<input type="date" id="d" value="${F.date}" aria-label="Date"></label></header>
+      <section class="od-stats">
+        <div class="od-stat"><span class="of-circ blue">${icon('ticket')}</span><div><small>Total Bookings</small><strong>${day.bookings}</strong>${delta(day.bookings, prev.bookings)}</div></div>
+        <div class="od-stat"><span class="of-circ green">${icon('people')}</span><div><small>Total Passengers</small><strong>${day.pax}</strong>${delta(day.pax, prev.pax)}</div></div>
+        <div class="od-stat"><span class="of-circ gold">${icon('coins')}</span><div><small>Total Sales</small><strong>${u.money(day.sales)}</strong>${delta(day.sales, prev.sales, true)}</div></div>
+        <div class="od-stat"><span class="of-circ purple">${icon('ship')}</span><div><small>${isToday ? "Today's Trips" : 'Trips'}</small><strong>${day.trips.length}</strong><span class="flat">${new Set(day.trips.map(t => t.routeId)).size} route(s) · ${day.trips.filter(t => t.cancelled).length} cancelled</span></div></div>
       </section>
-      <header class="of-sec">${icon('ship', 'of-head-ic sm')}<div><h3>Today's Trips</h3><p>Overview of trips, seat availability, and bookings for the selected date.</p></div></header>
-      <div class="of-grid2">${cards}</div>`;
+      <section class="od-cols">
+        <div class="od-card"><header>${icon('ship', 'od-ic')}<div class="ttl"><h3>${isToday ? "Today's Trips" : 'Trips'}</h3><p>Scheduled trips for ${isToday ? 'today' : 'this date'} with seat availability.</p></div><button class="od-all" id="all-trips">View All ${icon('chevright')}</button></header>
+          <div class="of-scroll"><table class="od-tbl"><thead><tr><th>Time</th><th>Route</th><th>Vessel</th><th>Seats</th><th>Occupancy</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+          ${day.trips.map(t => { const cap = trips.sellableCount(t), sold = cap - trips.availableCount(t), pct = cap ? Math.round(sold / cap * 100) : 0; return `<tr><td>${u.fmtTime(t.departs)}</td><td>${esc(trips.routeLabel(t.route))}${t.extra ? ' <span class="of-badge gold">EXTRA</span>' : ''}</td><td>${esc(config.vessel)}</td><td>${sold} / ${cap}</td><td><div class="od-occ"><i style="width:${pct}%"></i><span>${pct}%</span></div></td>
+            <td>${t.cancelled ? '<span class="od-pill bad">● Cancelled</span>' : '<span class="od-pill ok">● Active</span>'}</td>
+            <td class="od-acts"><button class="od-ico" data-seats="${t.id}" aria-label="View seats" title="View seats">${icon('eye')}</button><button class="od-ico" data-manage="${t.id}" aria-label="Trip actions" title="Trip actions">${icon('dots')}</button></td></tr>`; }).join('')}</tbody></table></div></div>
+        <div class="od-card"><header>${icon('doc', 'od-ic')}<div class="ttl"><h3>Recent Bookings</h3><p>Latest passenger reservations.</p></div><button class="od-all" id="all-bk">View All ${icon('chevright')}</button></header>
+          ${recent.length ? `<div class="of-scroll"><table class="od-tbl"><thead><tr><th>Ref</th><th>Trip</th><th>Pax</th><th>Total</th><th>Status</th><th>Payment</th></tr></thead><tbody>
+          ${recent.map(b => { const t = trips.byId(b.tripId) || trips.get(b.date, b.routeId); return `<tr><td><a href="#" class="od-ref" data-ref="${esc(b.ref)}">${esc(b.ref)}</a></td><td>${esc(config.ports[t.route.from].name.replace(' Port', ''))} → ${esc(config.ports[t.route.to].name.replace(' Port', ''))}<small>${u.fmtDate(b.date)} · ${u.fmtTime(t.departs)}</small></td><td>${b.passengers.length}</td><td>${u.money(b.total)}</td>
+            <td>${b.status === 'cancelled' ? '<span class="od-pill bad">Cancelled</span>' : '<span class="od-pill ok">Confirmed</span>'}</td><td>${b.payment.status === 'paid' ? '<span class="od-pill ok">Paid</span>' : '<span class="od-pill warn">Unpaid</span>'}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="of-empty">No bookings yet.</p>'}</div>
+      </section>`;
 
-    $$('[data-view]', el).forEach(b => b.addEventListener('click', () => {
-      F.tdate = F.date; F.troute = 'all'; F.tq = ''; F.tpage = 1; tab = 'trips'; draw();
-    }));
+    $('#d', el).addEventListener('change', e => { F.date = e.target.value || u.today(); dashboard(el); });
+    $('#all-trips', el).addEventListener('click', () => { F.tdate = F.date; F.troute = 'all'; F.tq = ''; F.tpage = 1; tab = 'trips'; draw(); });
+    $('#all-bk', el).addEventListener('click', () => { F.q = ''; F.fdate = ''; F.status = 'all'; F.page = 1; tab = 'bookings'; draw(); });
+    $$('[data-seats]', el).forEach(b => b.addEventListener('click', () => openTrip(b.dataset.seats, true, () => dashboard(el))));
+    $$('[data-manage]', el).forEach(b => b.addEventListener('click', () => openTrip(b.dataset.manage, false, () => dashboard(el))));
+    $$('[data-ref]', el).forEach(a => a.addEventListener('click', e => { e.preventDefault(); ticket.show(store.getBooking(a.dataset.ref)); }));
   }
 
   // ---- bookings ----------------------------------------------------------
@@ -134,9 +167,10 @@ window.G7 = window.G7 || {};
   };
 
   function bookings(el) {
+    bindPopClose();
     el.innerHTML = `${head('calendar', 'Bookings', 'Manage and monitor all booking records.')}
       <div class="of-filters">
-        <label>Search<div class="of-input">${icon('search')}<input id="q" value="${esc(F.q)}" placeholder="Reference no., name or phone"></div></label>
+        <label>Search<div class="of-input">${icon('search')}<input id="q" value="${esc(F.q)}" placeholder="Reference no., name or phone..."></div></label>
         <label>Travel date${dateInput('fd', F.fdate)}</label>
         <label>Status<div class="of-input"><select id="st">${[['all', 'All'], ['confirmed', 'Confirmed'], ['cancelled', 'Cancelled'], ['unpaid', 'Unpaid']].map(([v, t]) => `<option value="${v}" ${F.status === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div></label>
         <button class="of-btn ghost" id="clr">${icon('filter')} Clear</button><span class="sp"></span>
@@ -162,25 +196,22 @@ window.G7 = window.G7 || {};
       const pages = Math.max(1, Math.ceil(rows.length / F.size));
       if (F.page > pages) F.page = pages;
       const view = rows.slice((F.page - 1) * F.size, F.page * F.size);
-      const th = (k, t, cls) => `<th class="${cls || ''}" data-sort="${k}">${t}<span class="srt ${F.sort.key === k ? 'on' : ''}">${icon('sort')}</span></th>`;
+      const th = (k, t) => `<th data-sort="${k}">${t}<span class="srt ${F.sort.key === k ? 'on' : ''}">${icon('sort')}</span></th>`;
 
-      $('#list', el).innerHTML = `<div class="of-listbar"><span>${rows.length} booking(s) found</span>
+      $('#list', el).innerHTML = `<div class="of-listbar"><div class="of-lt">${icon('doc', 'of-lt-ic')}<b>${rows.length} booking(s) found</b></div>
         <label class="inl">Show <div class="of-input sm"><select id="size">${[10, 25, 50].map(n => `<option ${F.size === n ? 'selected' : ''}>${n}</option>`).join('')}</select></div> entries</label></div>
         ${view.length ? `<div class="of-scroll"><table class="of-tbl"><thead><tr>${th('ref', 'Ref')}${th('trip', 'Trip')}${th('contact', 'Contact')}${th('pax', 'Pax')}${th('seats', 'Seats')}${th('total', 'Total')}${th('payment', 'Payment')}${th('status', 'Status')}<th>Actions</th></tr></thead><tbody>
-        ${view.map(b => `<tr class="${b.status === 'cancelled' ? 'dim' : ''}">
-          <td><b>${esc(b.ref)}</b></td>
-          <td>${u.fmtDate(b.date)}<small>${esc(trips.routeLabel(trips.route(b.routeId)))}</small></td>
-          <td>${esc(b.contact.name)}<small>${esc(b.contact.phone)}</small></td>
+        ${view.map(b => { const t = trips.byId(b.tripId) || trips.get(b.date, b.routeId); return `<tr class="${b.status === 'cancelled' ? 'dim' : ''}">
+          <td><a href="#" class="of-ref" data-act="view" data-ref="${esc(b.ref)}">${esc(b.ref)}</a></td>
+          <td>${u.fmtDate(b.date)}<small>${esc(trips.routeLabel(t.route))} · ${u.fmtTime(t.departs)}</small><span class="of-chip">${icon('ship')} ${esc(config.vessel)}</span></td>
+          <td>${esc(b.contact.name)}<small class="ph">${icon('phone')} ${esc(b.contact.phone)}</small></td>
           <td>${b.passengers.length}</td>
           <td>${esc(b.passengers.map(p => p.seat).filter(Boolean).join(', ') || '—')}</td>
           <td><b>${u.money(b.total)}</b></td>
           <td>${b.payment.status === 'paid' ? `<span class="of-pill ok">${icon('checkcircle')}Paid</span>` : `<span class="of-pill warn">${icon('clock')}Unpaid</span>`}</td>
           <td>${b.status === 'cancelled' ? `<span class="of-pill bad">${icon('xcircle')}Cancelled</span>` : `<span class="of-pill ok">${icon('checkcircle')}Confirmed</span>`}</td>
-          <td class="acts">
-            <button class="of-btn outline sm" data-act="view" data-ref="${b.ref}">${icon('ticket')} Tickets</button>
-            ${b.status === 'confirmed' && b.payment.status !== 'paid' ? `<button class="of-btn outline sm" data-act="pay" data-ref="${b.ref}">${icon('check')} Mark paid</button>` : ''}
-            ${b.status === 'confirmed' ? `<button class="of-btn danger sm" data-act="cancel" data-ref="${b.ref}">${icon('trash')} Cancel</button>` : ''}
-          </td></tr>`).join('')}
+          <td class="acts"><button class="of-btn outline" data-act="view" data-ref="${esc(b.ref)}">${icon('ticket')} Tickets</button>
+            ${b.status === 'confirmed' ? `<button class="of-kebab" data-kebab="${esc(b.ref)}" aria-label="More actions">${icon('dots')}</button>` : ''}</td></tr>`; }).join('')}
         </tbody></table></div>` : '<p class="of-empty">No bookings match.</p>'}
         ${pager(rows.length, F.page, F.size, 'entries')}`;
     }
@@ -192,9 +223,21 @@ window.G7 = window.G7 || {};
       if (pg) { F.page = Number(pg.dataset.pg); return list(); }
       const sh = e.target.closest('[data-sort]');
       if (sh) { const k = sh.dataset.sort; F.sort = { key: k, dir: F.sort.key === k ? -F.sort.dir : 1 }; return list(); }
+      const kb = e.target.closest('[data-kebab]');
+      if (kb) {
+        const ref = kb.dataset.kebab, b = store.getBooking(ref);
+        const had = kb.parentNode.querySelector('.of-pop');
+        if (had) return had.remove();
+        const items = [];
+        if (b.payment.status !== 'paid') items.push({ act: 'pay', label: 'Mark paid', icon: 'check' });
+        items.push({ act: 'cancel', label: 'Cancel booking', icon: 'trash', danger: true });
+        return openPop(kb.parentNode, ref, items);
+      }
       const btn = e.target.closest('[data-act]');
       if (!btn) return;
+      if (e.preventDefault) e.preventDefault();
       const ref = btn.dataset.ref;
+      $$('.of-pop').forEach(x => x.remove());
       if (btn.dataset.act === 'view') ticket.show(store.getBooking(ref));
       if (btn.dataset.act === 'pay') { store.updateBooking(ref, b => (b.payment.status = 'paid')); u.toast('Marked as paid.', 'ok'); list(); }
       if (btn.dataset.act === 'cancel') {
@@ -207,13 +250,17 @@ window.G7 = window.G7 || {};
   }
 
   // ---- manifest ----------------------------------------------------------
+  const MSORT = {
+    name: r => r.p.name.toLowerCase(), contact: r => r.b.contact.phone, cat: r => (store.fares()[r.p.fareType] || {}).label || '',
+    seat: r => r.p.seat || 999, pay: r => r.b.payment.status, boarded: r => (r.p.boarded ? 1 : 0), ref: r => r.b.ref,
+  };
+
   function manifest(el) {
     const dayTrips = trips.forDate(F.date);
     const t = dayTrips.find(x => x.id === F.mtrip) || dayTrips.find(x => x.routeId === F.routeId) || dayTrips[0];
     F.mtrip = t.id;
     const rows = [];
     confirmedFor(t.id).forEach(b => b.passengers.forEach((p, i) => rows.push({ b, p, i })));
-    rows.sort((a, b) => (a.p.seat || 999) - (b.p.seat || 999));
     const cap = trips.sellableCount(t);
 
     el.innerHTML = `${head('people', 'Passenger Manifest', 'View and print the list of passengers for a selected trip.')}
@@ -223,30 +270,48 @@ window.G7 = window.G7 || {};
       <div class="printable">
       <section class="of-summary">
         <div class="of-circ big">${icon('ship')}</div>
-        <div class="main"><h3>${esc(trips.routeLabel(t.route))}</h3><p>${u.fmtDate(t.date)} · ${u.fmtTime(t.departs)}${t.cancelled ? ' · <b class="bad">CANCELLED</b>' : ''}</p><small>${esc(config.vessel)}</small></div>
+        <div class="main"><h3>${esc(trips.routeLabel(t.route))}</h3><p>${u.fmtDate(t.date)} · ${u.fmtTime(t.departs)}</p><small>${esc(config.vessel)}</small></div>
         <div class="kpi">${icon('seat')}<small>Total Seats</small><b>${cap}</b></div>
         <div class="kpi">${icon('people')}<small>Booked Passengers</small><b>${rows.length}</b></div>
         <div class="kpi">${icon('user')}<small>Available Seats</small><b>${trips.availableCount(t)}</b></div>
+        ${t.cancelled ? '<span class="of-pill bad">● Cancelled</span>' : '<span class="of-pill ok">● Active</span>'}
       </section>
-      <div class="of-panel"><div class="of-listbar"><div><h3>Passenger List</h3><span>${rows.length} passengers booked for this trip. <b id="bcount">${rows.filter(r => r.p.boarded).length}</b> boarded.</span></div>
-        <div class="of-input wide no-print">${icon('search')}<input id="mq" value="${esc(F.mq)}" placeholder="Search by name or reference number"></div></div>
+      <div class="of-panel"><div class="of-listbar"><div class="of-lt">${icon('people', 'of-lt-ic')}<div><h3>Passenger List</h3><span><span id="mcount">${rows.length}</span> passengers booked for this trip. <b id="bcount">${rows.filter(r => r.p.boarded).length}</b> boarded.</span></div></div>
+        <div class="of-input wide no-print">${icon('search')}<input id="mq" value="${esc(F.mq)}" placeholder="Search by name, reference no., or contact..."></div></div>
       <div id="mlist"></div></div></div>`;
-    $('#d', el).addEventListener('change', e => { F.date = e.target.value || u.today(); F.mtrip = ''; manifest(el); });
-    $('#r', el).addEventListener('change', e => { F.mtrip = e.target.value; manifest(el); });
-    $('#print', el).addEventListener('click', () => window.print());
+    $('#d', el).addEventListener('change', e => { F.date = e.target.value || u.today(); F.mtrip = ''; F.mpage = 1; manifest(el); });
+    $('#r', el).addEventListener('change', e => { F.mtrip = e.target.value; F.mpage = 1; manifest(el); });
+    $('#print', el).addEventListener('click', () => { const keep = F.mpage; F.mpage = 0; list(); window.print(); F.mpage = keep || 1; list(); });
 
     function list() {
       const q = F.mq.trim().toLowerCase();
-      const v = rows.filter(r => !q || (r.p.name + ' ' + r.b.ref).toLowerCase().includes(q));
-      $('#mlist', el).innerHTML = `<div class="of-scroll"><table class="of-tbl flat"><thead><tr><th>#</th><th>Booking Reference</th><th>Passenger Name</th><th>Contact Number</th><th>Category / Fare</th><th>Seat No.</th><th>Booking Status</th><th>Payment Status</th><th class="c">Boarded</th></tr></thead>
-        <tbody>${v.length ? v.map((r, n) => `<tr><td>${n + 1}</td><td><b>${esc(r.b.ref)}</b></td><td>${esc(r.p.name)}</td><td>${esc(r.b.contact.phone)}</td><td>${esc(config.fares[r.p.fareType].label)}</td><td>${r.p.seat || 'Lap'}</td>
+      let v = rows.filter(r => !q || (r.p.name + ' ' + r.b.ref + ' ' + r.b.contact.phone).toLowerCase().includes(q));
+      const kf = MSORT[F.msort.key] || MSORT.seat;
+      v = v.slice().sort((a, b) => (kf(a) > kf(b) ? 1 : kf(a) < kf(b) ? -1 : 0) * F.msort.dir);
+      const size = 10, all = F.mpage === 0;
+      const pages = Math.max(1, Math.ceil(v.length / size));
+      if (!all && F.mpage > pages) F.mpage = pages;
+      const view = all ? v : v.slice((F.mpage - 1) * size, F.mpage * size);
+      const th = (k, tx) => `<th data-msort="${k}">${tx}<span class="srt ${F.msort.key === k ? 'on' : ''}">${icon('sort')}</span></th>`;
+      $('#mlist', el).innerHTML = `<div class="of-scroll"><table class="of-tbl flat"><thead><tr><th>#</th>${th('ref', 'Booking Reference')}${th('name', 'Passenger Name')}${th('contact', 'Contact Number')}${th('cat', 'Category / Fare')}${th('seat', 'Seat No.')}<th>Booking Status</th>${th('pay', 'Payment Status')}${th('boarded', 'Boarded')}<th class="no-print">Actions</th></tr></thead>
+        <tbody>${view.map((r, n) => `<tr><td>${(all ? 0 : (F.mpage - 1) * size) + n + 1}</td><td><b>${esc(r.b.ref)}</b></td><td>${esc(r.p.name)}</td><td>${esc(r.b.contact.phone)}</td><td>${esc(r.p.fareLabel || (store.fares()[r.p.fareType] || {}).label || r.p.fareType)}</td><td>${r.p.seat || 'Lap'}</td>
           <td><span class="of-pill ok">Confirmed</span></td>
           <td>${r.b.payment.status === 'paid' ? '<span class="of-pill ok">Paid</span>' : '<span class="of-pill warn">Unpaid</span>'}</td>
-          <td class="c"><input type="checkbox" data-ref="${r.b.ref}" data-i="${r.i}" ${r.p.boarded ? 'checked' : ''}></td></tr>`).join('') : ''}</tbody></table></div>
-        ${v.length ? '' : `<div class="of-emptybox"><span class="of-circ big pale">${icon('people')}</span><b>No passengers booked for this trip.</b><p>Once passengers are booked, they will appear here.</p></div>`}`;
+          <td class="c"><input type="checkbox" data-ref="${r.b.ref}" data-i="${r.i}" ${r.p.boarded ? 'checked' : ''}></td>
+          <td class="no-print"><button class="of-ico" data-ticket="${r.b.ref}" aria-label="View ticket" title="View ticket">${icon('ticket')}</button></td></tr>`).join('')}</tbody></table></div>
+        ${v.length ? '' : `<div class="of-emptybox"><span class="of-circ big pale">${icon('people')}</span><b>No passengers booked for this trip.</b><p>Once passengers are booked, they will appear here.</p></div>`}
+        <div class="no-print">${pager(v.length, all ? 1 : F.mpage, size, 'entries')}</div>`;
     }
     list();
-    $('#mq', el).addEventListener('input', e => { F.mq = e.target.value; list(); });
+    $('#mq', el).addEventListener('input', e => { F.mq = e.target.value; F.mpage = 1; list(); });
+    $('#mlist', el).addEventListener('click', e => {
+      const pg = e.target.closest('[data-pg]');
+      if (pg) { F.mpage = Number(pg.dataset.pg); return list(); }
+      const sh = e.target.closest('[data-msort]');
+      if (sh) { const k = sh.dataset.msort; F.msort = { key: k, dir: F.msort.key === k ? -F.msort.dir : 1 }; return list(); }
+      const tk = e.target.closest('[data-ticket]');
+      if (tk) ticket.show(store.getBooking(tk.dataset.ticket));
+    });
     $('#mlist', el).addEventListener('change', e => {
       const cb = e.target.closest('input[type=checkbox]');
       if (!cb) return;
@@ -259,23 +324,28 @@ window.G7 = window.G7 || {};
 
   // ---- trips & seats -----------------------------------------------------
   const TRIPS_PER_PAGE = 8;
+  const TSORT = {
+    asc: [(a, b) => (a.date + a.departs).localeCompare(b.date + b.departs), 'Departure (Earliest)'],
+    desc: [(a, b) => (b.date + b.departs).localeCompare(a.date + a.departs), 'Departure (Latest)'],
+    booked: [(a, b) => b._booked - a._booked, 'Most booked'],
+    avail: [(a, b) => a._avail - b._avail, 'Fewest seats available'],
+  };
 
   function tripList() {
     const start = F.tdate || u.today();
     const days = F.tdate ? 1 : 14;
     const out = [];
-    for (let i = 0; i < days; i++) {
-      const d = u.addDays(start, i);
-      trips.forDate(d).forEach(t => out.push(t));
-    }
+    for (let i = 0; i < days; i++) trips.forDate(u.addDays(start, i)).forEach(t => out.push(t));
     const q = F.tq.trim().toLowerCase();
-    return out.filter(t => {
+    const list = out.filter(t => {
       if (F.troute !== 'all' && t.routeId !== F.troute) return false;
       if (F.tstatus === 'active' && t.cancelled) return false;
       if (F.tstatus === 'cancelled' && !t.cancelled) return false;
       if (!q) return true;
       return (config.vessel + ' ' + trips.routeLabel(t.route) + ' ' + t.id).toLowerCase().includes(q);
     });
+    list.forEach(t => { t._cap = trips.sellableCount(t); t._avail = trips.availableCount(t); t._booked = t._cap - t._avail; });
+    return list.sort((TSORT[F.tsort] || TSORT.asc)[0]);
   }
 
   function tripsTab(el) {
@@ -284,10 +354,9 @@ window.G7 = window.G7 || {};
         <label>Date${dateInput('td', F.tdate)}</label>
         <label>Route<div class="of-input"><select id="tr"><option value="all">All routes</option>${routeOptions(F.troute)}</select></div></label>
         <label>Status<div class="of-input"><select id="ts">${[['all', 'All'], ['active', 'Active'], ['cancelled', 'Cancelled']].map(([v, t]) => `<option value="${v}" ${F.tstatus === v ? 'selected' : ''}>${t}</option>`).join('')}</select></div></label>
-        <label class="grow">Search<div class="of-input">${icon('search')}<input id="tq" value="${esc(F.tq)}" placeholder="Search by vessel, route or trip ID"></div></label>
-        <button class="of-btn ghost" id="clr">${icon('refresh')} Clear</button></div>
-      <p class="of-hint">Leave the date empty to list the next 14 days.</p>
-      <div id="tl"></div>`;
+        <label class="grow">Search<div class="of-input">${icon('search')}<input id="tq" value="${esc(F.tq)}" placeholder="Search by vessel, route or trip ID..."></div></label>
+        <button class="of-btn ghost" id="clr">${icon('filter')} Clear</button></div>
+      <div class="of-panel" id="tl"></div>`;
     $('#td', el).addEventListener('change', e => { F.tdate = e.target.value; F.tpage = 1; list(); });
     $('#tr', el).addEventListener('change', e => { F.troute = e.target.value; F.tpage = 1; list(); });
     $('#ts', el).addEventListener('change', e => { F.tstatus = e.target.value; F.tpage = 1; list(); });
@@ -300,29 +369,35 @@ window.G7 = window.G7 || {};
       const pages = Math.max(1, Math.ceil(all.length / TRIPS_PER_PAGE));
       if (F.tpage > pages) F.tpage = pages;
       const view = all.slice((F.tpage - 1) * TRIPS_PER_PAGE, F.tpage * TRIPS_PER_PAGE);
-      $('#tl', el).innerHTML = (view.length ? view.map(t => {
-        const cap = trips.sellableCount(t), av = trips.availableCount(t);
-        const dd = new Date(t.date + 'T00:00:00');
-        const fromP = config.ports[t.route.from], toP = config.ports[t.route.to];
-        return `<div class="of-trow">
+      $('#tl', el).innerHTML = `<div class="of-listbar"><div class="of-lt">${icon('ship', 'of-lt-ic')}<div><b>${all.length} trip(s) found</b><span>${F.tdate ? 'Showing scheduled trips for ' + u.fmtDate(F.tdate) + '.' : 'Showing scheduled trips for the next 14 days.'}</span></div></div>
+        <label class="inl">Sort by <div class="of-input sm"><select id="tsort">${Object.keys(TSORT).map(k => `<option value="${k}" ${F.tsort === k ? 'selected' : ''}>${TSORT[k][1]}</option>`).join('')}</select></div></label></div>
+        <div class="of-trow head"><span>Date</span><span>Route</span><span>Departure</span><span>Vessel</span><span>Total Seats</span><span>Booked</span><span>Available</span><span>Status</span><span>Actions</span></div>`
+        + (view.length ? view.map(t => {
+          const dd = new Date(t.date + 'T00:00:00');
+          const pct = t._cap ? Math.round(t._booked / t._cap * 100) : 0;
+          const fromP = config.ports[t.route.from], toP = config.ports[t.route.to];
+          return `<div class="of-trow">
           <div class="d"><small>${dd.toLocaleDateString('en-PH', { weekday: 'short' })}</small><b>${dd.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</b></div>
-          <div class="r"><b>${esc(trips.routeLabel(t.route))}${t.extra ? ' <span class="of-badge gold">EXTRA</span>' : ''}</b><small>${esc(fromP.area)} → ${esc(toP.area)}</small></div>
-          <div><small>Departure</small><b>${u.fmtTime(t.departs)}</b></div>
-          <div class="v"><small>Vessel</small><span>${esc(config.vessel)}</span></div>
-          <div><small>Total Seats</small><b>${cap}</b></div><div><small>Booked</small><b>${cap - av}</b></div><div><small>Available</small><b>${av}</b></div>
-          <div><small>Status</small>${t.cancelled ? '<span class="of-pill bad">● Cancelled</span>' : '<span class="of-pill ok">● Active</span>'}</div>
+          <div class="r"><b>${esc(trips.routeLabel(t.route))}${t.extra ? ' <span class="of-badge gold">EXTRA</span>' : ''}</b><small>${icon('pin')} ${esc(fromP.area)} → ${esc(toP.area)}</small></div>
+          <div><b>${u.fmtTime(t.departs)}</b></div>
+          <div class="v">${icon('ship')}<span>${esc(config.vessel)}</span></div>
+          <div><b>${t._cap}</b></div>
+          <div class="bk"><b>${t._booked}</b><div class="of-occ"><i style="width:${pct}%"></i></div><small>${pct}%</small></div>
+          <div><span class="of-pill ${t._avail ? 'ok' : 'bad'}">${t._avail}</span></div>
+          <div>${t.cancelled ? '<span class="of-pill bad">● Cancelled</span>' : '<span class="of-pill ok">● Active</span>'}</div>
           <div class="acts"><button class="of-btn outline sm" data-seats="${t.id}">${icon('eye')} View Seats</button><button class="of-kebab" data-manage="${t.id}" aria-label="Trip actions">${icon('dots')}</button></div>
         </div>`;
-      }).join('') : '<p class="of-empty">No trips match.</p>') + pager(all.length, F.tpage, TRIPS_PER_PAGE, 'trips');
+        }).join('') : '<p class="of-empty">No trips match.</p>') + pager(all.length, F.tpage, TRIPS_PER_PAGE, 'trips');
     }
     list();
+    $('#tl', el).addEventListener('change', e => { if (e.target.id === 'tsort') { F.tsort = e.target.value; F.tpage = 1; list(); } });
     $('#tl', el).addEventListener('click', e => {
       const pg = e.target.closest('[data-pg]');
       if (pg) { F.tpage = Number(pg.dataset.pg); return list(); }
-      const s = e.target.closest('[data-seats]'), m = e.target.closest('[data-manage]');
-      const id = (s || m) && (s || m).dataset[s ? 'seats' : 'manage'];
+      const sx = e.target.closest('[data-seats]'), m = e.target.closest('[data-manage]');
+      const id = (sx || m) && (sx || m).dataset[sx ? 'seats' : 'manage'];
       if (!id) return;
-      openTrip(id, !!s, list);
+      openTrip(id, !!sx, list);
     });
   }
 
@@ -355,11 +430,7 @@ window.G7 = window.G7 || {};
       if (!t) { m.close(); done(); return; }
       const booked = confirmedFor(t.id).length;
 
-      if (withSeats) {
-        m.el.innerHTML = `<div class="of-modal">${tripHead(t)}
-          <p class="of-hint">Click a free seat to block it, or a blocked seat to release it. Seats with bookings cannot be changed here.</p><div id="map"></div></div>`;
-        return paintMap();
-      }
+      if (withSeats) { m.close(); return seatEditor(tripId, onChange); }
 
       m.el.innerHTML = `<div class="of-modal">${tripHead(t)}
         <div class="of-mgrid">
@@ -433,15 +504,67 @@ window.G7 = window.G7 || {};
       });
     }
 
-    function paintMap() {
-      const cur = trips.byId(tripId);
-      seatmap.render($('#map', m.el), trips.seatMap(cur), {
-        mode: 'admin',
-        onSeat(n) {
-          const blocked = cur.blocked.indexOf(n) >= 0 ? cur.blocked.filter(x => x !== n) : cur.blocked.concat(n);
+    paint();
+  }
+
+  // Seat plan editor: block/release seats on one trip, or mark seats under maintenance for all trips
+  function seatEditor(tripId, onChange) {
+    const t = trips.byId(tripId);
+    if (!t) return;
+    const m = u.modal('', 'of-mod of-seatmodal');
+    const pending = new Set();
+    let mode = 'block'; // 'block' = this trip only, 'maint' = every trip
+
+    function paint() {
+      const cur = trips.byId(tripId), map = trips.seatMap(cur);
+      const nums = Object.keys(map);
+      const total = nums.filter(n => map[n].state !== 'oos').length;
+      const booked = nums.filter(n => map[n].state === 'booked').length;
+      const avail = nums.filter(n => map[n].state === 'available').length;
+      const f = config.ports[t.route.from], to = config.ports[t.route.to];
+      const maint = nums.filter(n => map[n].state === 'oos').map(Number).sort((a, b) => a - b);
+      const blk = nums.filter(n => map[n].state === 'blocked').map(Number).sort((a, b) => a - b);
+      const chips = (list, cls) => list.length ? list.map(n => `<span class="of-sc ${cls}">${n}</span>`).join('') : '<em>None</em>';
+      m.el.innerHTML = `<div class="of-modal">
+        <header class="of-mh"><span class="of-circ big">${icon('ship')}</span>
+          <div class="grow"><h3>${esc(trips.routeLabel(t.route))}</h3><p>${u.fmtDate(t.date)} · ${u.fmtTime(cur.departs)} &nbsp;|&nbsp; ${esc(config.vessel)}</p><small>${icon('pin')} ${esc(f.area)} → ${esc(to.area)}</small></div>
+          <div class="of-sstats"><div><b>${total}</b><small>Total Seats</small></div><div><b>${booked}</b><small>Booked</small></div><div><b>${avail}</b><small>Available</small></div><div class="m"><b>${maint.length}</b><small>Maintenance</small></div></div></header>
+        <div class="of-seginfo">
+          <div class="seg" role="tablist"><button data-mode="block" class="${mode === 'block' ? 'on' : ''}">Block / release (this trip)</button><button data-mode="maint" class="${mode === 'maint' ? 'on' : ''}">Maintenance (all trips)</button></div>
+          <p>${icon('info')} ${mode === 'block'
+            ? 'Click a seat to block it for this trip only, or a blocked seat to release it. Seats with bookings cannot be changed here.'
+            : 'Click a seat to mark it out of service (under maintenance) on every trip, or an out-of-service seat to put it back in service. Seats with upcoming bookings cannot be taken out of service.'}</p></div>
+        <div class="of-strip"><div class="maint"><b>${icon('wrench')} Under maintenance (all trips)</b>${chips(maint, 'maint')}</div><div class="blk"><b>${icon('lock')} Blocked on this trip</b>${chips(blk, 'blk')}</div></div>
+        <div class="of-sgrid">${config.sections.map(sec => { const ns = G7.seatmap.seatNumbers(sec); return `<section class="of-ssec"><header><h4>${esc(sec.name)}</h4><span>${ns.length} seats</span></header><div data-sec="${sec.id}"></div></section>`; }).join('')}</div>
+        <footer class="of-sfoot"><div class="of-leg"><span><i class="seat-chip available"></i>Available</span><span><i class="seat-chip sel"></i>Selected</span><span><i class="seat-chip taken"></i>Taken</span><span><i class="seat-chip blocked"></i>Blocked</span><span><i class="seat-chip oos"></i>Under maintenance</span></div>
+          <span class="sp"></span><button class="of-btn ghost" id="s-back">${icon('back')} Back</button><button class="of-btn navy" id="s-save">${icon('lock')} Save Changes${pending.size ? ' (' + pending.size + ')' : ''}</button></footer></div>`;
+
+      config.sections.forEach(sec => {
+        seatmap.render($('[data-sec="' + sec.id + '"]', m.el), map, {
+          mode: 'admin', section: sec.id, selected: Array.from(pending), legend: false, stern: false,
+          onSeat(n) { if (pending.has(n)) pending.delete(n); else pending.add(n); paint(); },
+        });
+      });
+      $$('[data-mode]', m.el).forEach(b => b.addEventListener('click', () => { mode = b.dataset.mode; pending.clear(); paint(); }));
+      $('#s-back', m.el).addEventListener('click', () => m.close());
+      $('#s-save', m.el).addEventListener('click', () => {
+        if (!pending.size) return m.close();
+        const nums = Array.from(pending);
+        if (mode === 'block') {
+          let blocked = cur.blocked.slice();
+          nums.forEach(n => { blocked = blocked.indexOf(n) >= 0 ? blocked.filter(x => x !== n) : blocked.concat(n); });
           store.setTripOverride(cur.id, { blocked });
-          paintMap(); done();
-        },
+        } else {
+          let oos = store.maintenanceSeats().slice();
+          const upcoming = store.bookings().filter(b => b.status === 'confirmed' && b.date >= u.today());
+          const clash = nums.filter(n => oos.indexOf(n) < 0 && upcoming.some(b => b.passengers.some(p => p.seat === n)));
+          if (clash.length) return u.toast('Seat(s) ' + clash.join(', ') + ' have upcoming bookings. Move or cancel those first.', 'err');
+          nums.forEach(n => { oos = oos.indexOf(n) >= 0 ? oos.filter(x => x !== n) : oos.concat(n); });
+          store.setMaintenanceSeats(oos.sort((a, b) => a - b));
+        }
+        u.toast('Seat changes saved.', 'ok');
+        onChange && onChange();
+        m.close();
       });
     }
     paint();
@@ -471,68 +594,139 @@ window.G7 = window.G7 || {};
 
   // ---- fares -------------------------------------------------------------
   const FARE_ART = { regular: ['people', 'blue'], student: ['cap', 'green'], senior_pwd: ['user', 'orange'], child: ['child', 'purple'], infant: ['infant', 'pink'] };
+  const DOTS = ['#1b7fe0', '#1c9b5a', '#f08a1c', '#a45be0', '#e0485f', '#0aa7b5', '#8a6d3b', '#5b6a82'];
+  const money0 = n => config.currency + Number(n).toLocaleString('en-PH');
+
+  function fareModal(id, done) {
+    const f = id ? store.fares()[id] : null;
+    const custom = !f || f.custom;
+    const m = u.modal(`<div class="of-modal"><h3>${f ? 'Edit fare: ' + esc(f.label) : 'Add Category'}</h3>
+      <form id="ff">
+        ${custom ? `<label>Category name<div class="of-input"><input id="f-label" value="${esc(f ? f.label : '')}" placeholder="e.g. Group (10+)" required maxlength="40"></div></label>
+        <label>Description<div class="of-input"><input id="f-note" value="${esc(f ? f.note : '')}" placeholder="Shown to passengers" maxlength="90"></div></label>` : ''}
+        <label>Price (${config.currency})<div class="of-input"><input type="number" min="0" step="0.01" id="f-price" value="${f ? f.price : ''}" required></div></label>
+        ${custom ? `<label class="chk"><input type="checkbox" id="f-adult" ${!f || f.adult ? 'checked' : ''}> Counts as an adult (can travel with an infant)</label>` : ''}
+        <p class="of-hint">Applies to future bookings only. Custom categories take a seat.</p>
+        <div class="of-mfoot"><span class="sp"></span><button type="button" class="of-btn ghost" id="f-x">Cancel</button><button class="of-btn navy">Save</button></div></form></div>`, 'of-mod');
+    $('#f-x', m.el).addEventListener('click', () => m.close());
+    $('#ff', m.el).addEventListener('submit', e => {
+      e.preventDefault();
+      const price = Number($('#f-price', m.el).value);
+      if (!(price >= 0)) return u.toast('Enter a valid price.', 'err');
+      if (custom) {
+        const label = $('#f-label', m.el).value.trim();
+        if (!label) return u.toast('Enter a category name.', 'err');
+        const list = store.customFares();
+        const rec = { id: id || 'c' + Date.now().toString(36), label, note: $('#f-note', m.el).value.trim(), price, seat: true, adult: $('#f-adult', m.el).checked };
+        if (id) list.splice(list.findIndex(x => x.id === id), 1, rec); else list.push(rec);
+        store.saveCustomFares(list);
+      } else {
+        const map = {};
+        Object.keys(config.fares).forEach(k => (map[k] = store.fares()[k].price));
+        map[id] = price;
+        store.setFarePrices(map);
+      }
+      u.toast('Fare saved.', 'ok'); m.close(); done();
+    });
+  }
 
   function fares(el) {
-    const f = store.fares();
+    bindPopClose();
+    const f = store.fares(), order = store.fareOrder();
     el.innerHTML = `${head('tag', 'Fares', 'Manage ticket fares for all passenger categories.')}
       <div class="of-cols">
-        <div class="of-panel pad">${config.fareOrder.map(id => `<div class="of-fare">
-          <span class="of-circ ${FARE_ART[id] ? FARE_ART[id][1] : 'blue'}">${icon(FARE_ART[id] ? FARE_ART[id][0] : 'tag')}</span>
-          <div class="n"><b>${esc(f[id].label)}</b><small>${esc(f[id].note || (f[id].seat ? 'Standard fare for all passengers.' : 'Rides on an adult\'s lap.'))}</small></div>
-          <strong>${config.currency}${Number(f[id].price).toLocaleString('en-PH')}</strong>
-          <button class="of-btn outline" data-edit="${id}">${icon('pencil')} Edit</button></div>`).join('')}</div>
+        <div class="of-panel pad">
+          <div class="of-fhead"><span class="of-circ blue">${icon('people')}</span><div><h3>Passenger Categories</h3><p>Set and update the standard fares for each passenger category.</p></div>
+            <button class="of-btn navy" id="addcat">${icon('plus')} Add Category</button></div>
+          <div class="of-frow th"><span>Category</span><span>Fare</span><span>Actions</span></div>
+          ${order.map(id => { const art = FARE_ART[id] || ['tag', 'purple']; return `<div class="of-frow">
+            <div class="c"><span class="of-circ ${art[1]}">${icon(art[0])}</span><div><b>${esc(f[id].label)}</b><small>${esc(f[id].note || (f[id].seat ? 'Standard fare for all passengers.' : 'Rides on an adult\'s lap, no seat assigned.'))}</small></div></div>
+            <strong>${money0(f[id].price)}</strong>
+            <div class="acts"><button class="of-btn outline" data-edit="${id}">${icon('pencil')} Edit</button><button class="of-kebab" data-kebab="${id}" aria-label="More">${icon('dots')}</button></div></div>`; }).join('')}
+        </div>
         <aside class="of-side">
-          <div class="of-panel pad blue"><h4>${icon('info', 'of-circ-ic')} Fare Information</h4><ul>
+          <div class="of-panel pad blue"><h4><span class="of-circ-ic">${icon('info')}</span> Fare Information</h4><ul class="chk">
             <li>These fares apply to all trips and routes.</li><li>New fares will apply to future bookings.</li>
             <li>Existing tickets will keep the fare they were sold at.</li><li>Make sure to update schedules if there are fare changes.</li></ul></div>
-          <div class="of-panel pad gold"><h4>${icon('doc', 'of-circ-ic')} Passenger Categories</h4>
-            ${config.fareOrder.map(id => `<div class="of-kv"><span>${esc(f[id].label)}</span><b>${config.currency}${Number(f[id].price).toLocaleString('en-PH')}</b></div>`).join('')}</div>
+          <div class="of-panel pad gold"><h4><span class="of-circ-ic">${icon('chart')}</span> Fare Summary</h4>
+            ${order.map((id, n) => `<div class="of-kv"><span><i class="dot" style="background:${DOTS[n % DOTS.length]}"></i>${esc(f[id].label)}</span><b>${money0(f[id].price)}</b></div>`).join('')}</div>
         </aside></div>`;
-    $$('[data-edit]', el).forEach(b => b.addEventListener('click', () => {
-      const id = b.dataset.edit;
-      const m = u.modal(`<div class="of-modal"><h3>Edit fare: ${esc(f[id].label)}</h3>
-        <form id="ff"><label>Price (${config.currency})<div class="of-input"><input type="number" min="0" step="0.01" id="price" value="${f[id].price}" required></div></label>
-        <p class="of-hint">Applies to future bookings only.</p>
-        <div class="of-filters slim"><button class="of-btn navy">Save fare</button></div></form></div>`);
-      $('#ff', m.el).addEventListener('submit', e => {
-        e.preventDefault();
-        const map = {};
-        config.fareOrder.forEach(k => (map[k] = f[k].price));
-        map[id] = Number($('#price', m.el).value) || 0;
-        store.setFarePrices(map);
-        u.toast('Fare saved.', 'ok');
-        m.close();
-        fares(el);
-      });
+    const again = () => fares(el);
+    $('#addcat', el).addEventListener('click', () => fareModal(null, again));
+    $$('[data-edit]', el).forEach(b => b.addEventListener('click', () => fareModal(b.dataset.edit, again)));
+    $$('[data-kebab]', el).forEach(b => b.addEventListener('click', () => {
+      const id = b.dataset.kebab, had = b.parentNode.querySelector('.of-pop');
+      if (had) return had.remove();
+      const custom = f[id].custom;
+      openPop(b.parentNode, id, custom ? [{ act: 'edit', label: 'Edit', icon: 'pencil' }, { act: 'del', label: 'Delete category', icon: 'trash', danger: true }]
+        : [{ act: 'edit', label: 'Edit price', icon: 'pencil' }, { act: 'reset', label: 'Reset to default price', icon: 'refresh' }]);
+      $$('.of-pop [data-act]', b.parentNode).forEach(x => x.addEventListener('click', () => {
+        $$('.of-pop').forEach(p => p.remove());
+        if (x.dataset.act === 'edit') fareModal(id, again);
+        if (x.dataset.act === 'del' && confirm('Delete this category? Past tickets keep their fare.')) { store.saveCustomFares(store.customFares().filter(c => c.id !== id)); u.toast('Category deleted.', 'ok'); again(); }
+        if (x.dataset.act === 'reset') { const map = {}; Object.keys(config.fares).forEach(k => { if (k !== id) map[k] = store.fares()[k].price; }); store.setFarePrices(map); u.toast('Price reset.', 'ok'); again(); }
+      }));
     }));
   }
 
   // ---- data --------------------------------------------------------------
+  const ART = {
+    csv: '<svg viewBox="0 0 120 80" class="of-art"><rect x="34" y="6" width="52" height="64" rx="5" fill="#fff" stroke="#9fb6dc" stroke-width="2"/><text x="42" y="22" font-size="11" font-weight="700" fill="#0a2f7a" font-family="system-ui">CSV</text><rect x="42" y="30" width="36" height="26" rx="2" fill="#e6f6ee" stroke="#1c9b5a"/><path d="M42 39h36M42 48h36M54 30v26M66 30v26" stroke="#1c9b5a" fill="none"/><circle cx="82" cy="62" r="11" fill="#0a3a7a"/><path d="M82 56v10M77 62l5 5 5-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+    json: '<svg viewBox="0 0 120 80" class="of-art"><rect x="34" y="6" width="52" height="64" rx="5" fill="#fff" stroke="#9fd3b4" stroke-width="2"/><text x="40" y="22" font-size="11" font-weight="700" fill="#12703f" font-family="system-ui">JSON</text><text x="44" y="52" font-size="22" font-weight="700" fill="#1c9b5a" font-family="monospace">{ }</text><circle cx="82" cy="62" r="11" fill="#1c7a47"/><path d="M82 56v10M77 62l5 5 5-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+    sample: '<svg viewBox="0 0 120 80" class="of-art"><rect x="34" y="6" width="52" height="64" rx="5" fill="#fff" stroke="#c9b6ee" stroke-width="2"/><path d="M42 20h30M42 30h22M42 40h30M42 50h18" stroke="#a58be0" stroke-width="3" stroke-linecap="round"/><circle cx="82" cy="62" r="11" fill="#6b3fd4"/><path d="M82 68V57M77 62l5-5 5 5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+    erase: '<svg viewBox="0 0 120 80" class="of-art"><ellipse cx="58" cy="18" rx="22" ry="8" fill="#f6b8c0"/><path d="M36 18v38c0 5 10 9 22 9s22-4 22-9V18" fill="#f9cfd5"/><ellipse cx="58" cy="18" rx="22" ry="8" fill="#f4a9b4"/><circle cx="82" cy="60" r="12" fill="#d63a50"/><path d="M76 56h12M79 56v-2h6v2M77 56l1 10h8l1-10" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+  };
+
+  function storageBytes() {
+    let n = 0;
+    try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k && k.indexOf('g7.') === 0) n += (k.length + String(localStorage.getItem(k)).length) * 2; } } catch (e) { /* storage blocked */ }
+    return n;
+  }
+  const fmtBytes = n => (n >= 1048576 ? (n / 1048576).toFixed(2) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
+
   function data(el) {
+    const bks = store.bookings();
+    const tripIds = new Set(bks.map(b => b.tripId).concat(Object.keys(store.tripOverrides()), store.extraTrips().map(t => t.id)));
+    const pax = bks.filter(b => b.status === 'confirmed').reduce((n, b) => n + b.passengers.length, 0);
+    const used = storageBytes(), LIMIT = 5 * 1048576, pct = Math.min(100, Math.round(used / LIMIT * 100));
+
     el.innerHTML = `${head('database', 'Data Management', 'Export, import, and manage booking data. All data is stored locally on this computer.')}
       <div class="of-data">
-        <div class="of-dcard blue"><span class="of-circ blue">${icon('file')}</span><h3>Export Bookings (CSV)</h3><p>Download all booking records in CSV format. You can open this file in Excel or other spreadsheet software.</p><button class="of-btn solid blue" id="csv">${icon('download')} Export as CSV</button></div>
-        <div class="of-dcard green"><span class="of-circ green">${icon('doc')}</span><h3>Download Full Backup (JSON)</h3><p>Download a complete backup of all system data (bookings, trips, fares, etc.) in JSON format.</p><button class="of-btn solid green" id="json">${icon('download')} Download Backup</button></div>
-        <div class="of-dcard purple"><span class="of-circ purple">${icon('upload')}</span><h3>Load Sample Bookings (Testing)</h3><p>Import sample booking records for testing and demonstration purposes. They are added to your current data.</p><button class="of-btn solid purple" id="sample">${icon('upload')} Load Sample Data</button></div>
-        <div class="of-dcard red"><span class="of-circ red">${icon('trash')}</span><h3>Erase All Data</h3><p>Permanently delete all bookings, trips, fares, and other data stored in this computer. This action cannot be undone.</p><button class="of-btn solid red" id="reset">${icon('trash')} Erase All Data</button></div>
-        <aside class="of-dcard info"><h4>${icon('info', 'of-circ-ic')} Data Information</h4><ul>
+        <div class="of-dcard blue"><span class="of-circ blue">${icon('file')}</span><h3>Export Bookings (CSV)</h3><p>Download all booking records in CSV format. You can open this file in Excel or other spreadsheet software.</p>${ART.csv}<button class="of-btn solid blue" id="csv">${icon('download')} Export as CSV</button></div>
+        <div class="of-dcard green"><span class="of-circ green">${icon('database')}</span><h3>Download Full Backup (JSON)</h3><p>Download a complete backup of all system data (bookings, trips, fares, etc.) in JSON format.</p>${ART.json}<button class="of-btn solid green" id="json">${icon('download')} Download Backup</button></div>
+        <div class="of-dcard purple"><span class="of-circ purple">${icon('upload')}</span><h3>Load Sample Bookings (Testing)</h3><p>Import sample booking records for testing and demonstration purposes. They are added to your current data.</p>${ART.sample}<button class="of-btn solid purple" id="sample">${icon('upload')} Load Sample Data</button></div>
+        <div class="of-dcard red"><span class="of-circ red">${icon('trash')}</span><h3>Erase All Data</h3><p>Permanently delete all bookings, trips, fares, and other data stored in this computer. <b>This action cannot be undone.</b></p>${ART.erase}<button class="of-btn solid red" id="reset">${icon('trash')} Erase All Data</button></div>
+        <aside class="of-dcard info"><h4><span class="of-circ-ic">${icon('info')}</span> Data Information</h4><ul class="chk">
           <li>All data is stored locally in this browser (computer) using localStorage.</li><li>Back up your data regularly to prevent accidental loss.</li>
           <li>Sample data is for testing only and can be removed anytime.</li><li>The erase option will permanently delete all data. Make sure to create a backup before proceeding.</li></ul></aside>
+      </div>
+      <div class="of-dlow">
+        <div class="of-panel pad"><div class="of-fhead">${icon('database', 'of-lt-ic')}<div><h3>Current Data Summary</h3><p>Overview of data stored in this computer.</p></div><button class="of-btn ghost" id="refresh">${icon('refresh')} Refresh</button></div>
+          <div class="of-sumtiles">
+            <div class="t1">${icon('ticket')}<span>Bookings</span><b>${bks.length}</b><small>Total records</small></div>
+            <div class="t2">${icon('ship')}<span>Trips</span><b>${tripIds.size}</b><small>Trips with records</small></div>
+            <div class="t3">${icon('tag')}<span>Fares</span><b>${store.fareOrder().length}</b><small>Fare categories</small></div>
+            <div class="t4">${icon('people')}<span>Passengers</span><b>${pax}</b><small>Total passengers</small></div></div></div>
+        <div class="of-panel pad"><div class="of-fhead">${icon('chart', 'of-lt-ic')}<div><h3>Storage Usage</h3><p>Local storage usage in this browser.</p></div></div>
+          <div class="of-store"><div class="bar"><i style="width:${pct}%"></i></div><b>${pct}%</b></div>
+          <div class="of-kv"><span>Used Storage</span><b>${fmtBytes(used)}</b></div><div class="of-kv"><span>Total Available</span><b>5.0 MB</b></div><div class="of-kv"><span>Estimated Capacity</span><b>~ 5 MB (browser limit)</b></div>
+          <div class="of-info2">${icon('info')}<p>Data is stored in your browser's localStorage. Clearing browser data may remove all records.</p></div></div>
       </div>`;
 
+    $('#refresh', el).addEventListener('click', () => data(el));
     $('#csv', el).addEventListener('click', () => {
       const headRow = ['Ref', 'Date', 'Route', 'Departs', 'Passenger', 'Fare type', 'Seat', 'Amount', 'Contact', 'Phone', 'Payment', 'Status', 'Boarded'];
       const lines = [headRow.join(',')];
       store.bookings().forEach(b => b.passengers.forEach(p => lines.push([
-        b.ref, b.date, trips.routeLabel(trips.route(b.routeId)), (trips.byId(b.tripId) || trips.get(b.date, b.routeId)).departs, p.name, p.fareType, p.seat || '', p.fare,
+        b.ref, b.date, trips.routeLabel(trips.route(b.routeId)), (trips.byId(b.tripId) || trips.get(b.date, b.routeId)).departs, p.name, p.fareLabel || p.fareType, p.seat || '', p.fare,
         b.contact.name, b.contact.phone, b.payment.status, b.status, p.boarded ? 'yes' : 'no',
       ].map(u.csvCell).join(','))));
       u.download('g7-bookings.csv', lines.join('\n'), 'text/csv');
     });
     $('#json', el).addEventListener('click', () => u.download('g7-backup.json', JSON.stringify(store.exportAll(), null, 2), 'application/json'));
-    $('#sample', el).addEventListener('click', () => { const n = sampleData(); u.toast(n + ' sample bookings added.', 'ok'); });
+    $('#sample', el).addEventListener('click', () => { const n = sampleData(); u.toast(n + ' sample bookings added.', 'ok'); data(el); });
     $('#reset', el).addEventListener('click', () => {
-      if (confirm('Erase ALL bookings, trip changes and fare changes? This cannot be undone.')) { store.resetAll(); u.toast('All data erased.', 'ok'); }
+      if (confirm('Erase ALL bookings, trip changes and fare changes? This cannot be undone.')) { store.resetAll(); u.toast('All data erased.', 'ok'); data(el); }
     });
   }
 

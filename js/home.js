@@ -95,7 +95,7 @@ window.G7 = window.G7 || {};
       </div>
     </article>`).join('');
 
-    const rows = config.fareOrder.map(f => `<tr><td>${icon(FARE_ICON[f])}${esc(fares[f].label)}</td><td class="num">${u.money(fares[f].price)}</td></tr>`).join('');
+    const rows = G7.store.fareOrder().map(f => `<tr><td>${icon(FARE_ICON[f] || 'tag')}${esc(fares[f].label)}</td><td class="num">${u.money(fares[f].price)}</td></tr>`).join('');
     const adv = config.advisory || { summary: '', items: [] };
 
     return `<section class="band routes-band" id="routes">

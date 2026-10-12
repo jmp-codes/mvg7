@@ -76,7 +76,7 @@ G7.trips = (function () {
   function seatMap(trip) {
     const map = {};
     allSeats().forEach(n => (map[n] = { state: 'available' }));
-    config.outOfService.forEach(n => { if (map[n]) map[n] = { state: 'oos' }; });
+    store.maintenanceSeats().forEach(n => { if (map[n]) map[n] = { state: 'oos' }; });
     trip.blocked.forEach(n => { if (map[n] && map[n].state === 'available') map[n] = { state: 'blocked' }; });
     store.bookings()
       .filter(b => b.tripId === trip.id && b.status === 'confirmed')
