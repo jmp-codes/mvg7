@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>G7 Marine Transport - Book your sea journey</title>
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/booking.css">
+  <link rel="stylesheet" href="css/office.css">
+</head>
+<body>
+  <header class="topbar no-print">
+    <a class="brand" href="#/home" aria-label="G7 Marine Transport home">
+      <svg class="logo-mark" viewBox="0 0 80 40" aria-hidden="true">
+        <path d="M2 30c10-8 18-8 28-2s20 6 30-2" fill="none" stroke="#1b8fc7" stroke-width="3" stroke-linecap="round"/>
+        <path d="M6 35c10-6 18-6 28-1s20 5 32-1" fill="none" stroke="#0a2f7a" stroke-width="2" stroke-linecap="round"/>
+        <text x="26" y="26" font-family="Georgia,serif" font-style="italic" font-weight="700" font-size="26" fill="#0a2f7a">G7</text>
+      </svg>
+      <span class="brand-text"><b>G7 MARINE</b><b>TRANSPORT</b></span>
+      <img class="logo-img" src="assets/logo.png" alt="G7 Marine Transport" onload="this.parentNode.classList.add('has-logo')" onerror="this.remove()">
+    </a>
+    <nav class="nav-links">
+      <a href="#/home" data-nav="home">Home</a>
+      <a href="#/home?s=routes">Routes &amp; Schedules</a>
+      <a href="#/home?s=guide">Travel Guide</a>
+      <a href="#/home?s=about">About Us</a>
+      <a href="#/home?s=contact">Contact</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn-outline" href="#/office" data-nav="office">Ticket Office</a>
+      <a class="btn-navy" href="#/book" data-nav="book">Book Now</a>
+    </div>
+  </header>
+
+  <main id="view"></main>
+
+  <!-- Load order matters: each file only depends on the ones above it. -->
+  <script src="js/config.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/trips.js"></script>
+  <script src="js/seatmap.js"></script>
+  <script src="js/ticket.js"></script>
+  <script src="js/booking.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/home.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
