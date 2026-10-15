@@ -263,9 +263,14 @@ window.G7 = window.G7 || {};
       location.hash = '#/book';
     });
 
-    $('#f-check', root).addEventListener('submit', e => {
+    $('#f-check', root).addEventListener('submit', async e => {
       e.preventDefault();
-      const b = ticket.find($('#c-ref', root).value, $('#c-phone', root).value);
+      const btn = $('#f-check button[type=submit], #f-check .btn-navy', root);
+      if (btn) btn.disabled = true;
+      let b = null;
+      try { b = await ticket.find($('#c-ref', root).value, $('#c-phone', root).value); }
+      catch (err) { console.error('[lookup]', err); if (btn) btn.disabled = false; return u.toast('Could not check the booking right now: ' + (err.message || err), 'err'); }
+      if (btn) btn.disabled = false;
       if (!b) return u.toast('No booking found with those details.', 'err');
       ticket.show(b);
     });
