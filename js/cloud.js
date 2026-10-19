@@ -144,7 +144,8 @@ G7.cloud = (function () {
     ref = String(ref || '').trim().toUpperCase();
     if (!ref) return null;
     const { data, error } = await sb.rpc('lookup_booking', { p_ref: ref, p_phone: String(phone || '') });
-    if (error || !data) return null;
+    if (error) throw error;
+    if (!data) return null;
     C.kv.bookings = (C.kv.bookings || []).filter(x => x.ref !== data.ref).concat([data]);
     return clone(data);
   }

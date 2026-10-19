@@ -110,8 +110,10 @@ G7.ticket = (function () {
 
     u.$('#lookup-form', root).addEventListener('submit', async e => {
       e.preventDefault();
-      const b = await find(u.$('#lk-ref').value, u.$('#lk-phone').value);
       const out = u.$('#lookup-result', root);
+      let b = null;
+      try { b = await find(u.$('#lk-ref').value, u.$('#lk-phone').value); }
+      catch (err) { console.error('[lookup]', err); out.innerHTML = '<p class="msg err">Could not check the booking right now (' + u.esc(String(err.message || err)) + '). Please try again or contact the ticket office.</p>'; return; }
       if (!b) { out.innerHTML = '<p class="msg err">No booking found with those details.</p>'; return; }
       out.innerHTML = bookingHTML(b);
       wirePrint(out);

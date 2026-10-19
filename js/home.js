@@ -258,14 +258,21 @@ window.G7 = window.G7 || {};
       if (!from.value || !to.value) return u.toast('Please select your origin and destination.', 'err');
       const date = $('#s-date', root).value;
       if (!date) return u.toast('Please select a departure date.', 'err');
+      const ds = trips.dayStatus(date);
+      if (!ds.ok) return u.toast(ds.reason + (ds.next ? ' Next available date: ' + u.fmtDate(ds.next) + '.' : ''), 'err');
       const r = config.routes.find(x => x.from === from.value && x.to === to.value);
       G7.booking.prefill({ date, routeId: r.id, pax: Number($('#s-pax', root).value) });
       location.hash = '#/book';
     });
 
-    $('#f-check', root).addEventListener('submit', e => {
+    $('#f-check', root).addEventListener('submit', async e => {
       e.preventDefault();
-      const b = ticket.find($('#c-ref', root).value, $('#c-phone', root).value);
+      const btn = $('#f-check button[type=submit], #f-check .btn-navy', root);
+      if (btn) btn.disabled = true;
+      let b = null;
+      try { b = await ticket.find($('#c-ref', root).value, $('#c-phone', root).value); }
+      catch (err) { console.error('[lookup]', err); if (btn) btn.disabled = false; return u.toast('Could not check the booking right now: ' + (err.message || err), 'err'); }
+      if (btn) btn.disabled = false;
       if (!b) return u.toast('No booking found with those details.', 'err');
       ticket.show(b);
     });

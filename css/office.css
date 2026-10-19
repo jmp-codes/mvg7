@@ -434,3 +434,30 @@ td.pay-paid, td.pay-void, td.pay-refund { white-space: nowrap; } .of-tbl td:firs
 
 /* Logo on dark sidebar: the badge sits on a white disc so its navy ring stays visible */
 .os-side .brand.has-logo .logo-img { filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .35)); }
+
+/* ---------- Ticket Office sidebar on shorter screens ----------
+ * The sidebar is as tall as the window. On laptops and small monitors the menu used to run off the bottom
+ * (Data Management, the account menu and Sign out were out of reach). It now scrolls, keeps the account
+ * block pinned at the bottom, and gets more compact as the window gets shorter. */
+@media (min-width: 861px) {
+  .os-side { overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, .35) transparent; }
+  .os-side .os-foot { position: sticky; bottom: 0; z-index: 3; background: #0a2f6b; padding-bottom: .6rem; flex: none; }
+  .os-side .os-foot .os-menu { z-index: 5; }
+  .os-side nav { flex: none; }
+}
+@media (min-width: 861px) and (max-height: 920px) {
+  .os-side { padding-top: .8rem; }
+  .os-side .brand.has-logo { margin-bottom: .2rem; }
+  .os-side .brand.has-logo .logo-img { max-width: 120px; }
+  .os-label { margin: .2rem 1.6rem .5rem; font-size: .9rem; }
+  .os-side nav { gap: .1rem; }
+  .os-link { padding: .62rem 1rem; font-size: .98rem; }
+  .os-link .ic { width: 22px; height: 22px; }
+  .os-foot { padding-top: .5rem; }
+}
+@media (min-width: 861px) and (max-height: 720px) {
+  .os-side .brand.has-logo .logo-img { max-width: 84px; }
+  .os-label { display: none; }
+  .os-link { padding: .45rem .9rem; font-size: .92rem; }
+  .os-link .ic { width: 20px; height: 20px; }
+}

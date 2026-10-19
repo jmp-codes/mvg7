@@ -108,5 +108,26 @@ G7.trips = (function () {
     return { ok: true, reason: '' };
   }
 
-  return { id, route, routeLabel, routeLongLabel, get, byId, forDate, addExtra, allSeats, seatMap, availableCount, sellableCount, departureDate, bookable };
+  // Can a customer book anything on this date? { ok, reason, next? }  (next = the next date that has an open trip)
+  function nextBookable(from) {
+    const u = G7.u, max = u.addDays(u.today(), config.advanceBookingDays);
+    for (let i = 1; i <= config.advanceBookingDays; i++) {
+      const d = u.addDays(from, i);
+      if (d > max) break;
+      if (forDate(d).some(t => bookable(t).ok && availableCount(t) > 0)) return d;
+    }
+    return '';
+  }
+  function dayStatus(date) {
+    const u = G7.u, today = u.today(), max = u.addDays(today, config.advanceBookingDays);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return { ok: false, range: true, reason: 'Please choose a travel date.' };
+    if (date < today) return { ok: false, range: true, reason: 'That date has already passed. Please choose today or a later date.' };
+    if (date > max) return { ok: false, range: true, reason: 'There are no trips on that date yet. Bookings are open up to ' + u.fmtDate(max) + '.' };
+    if (!forDate(date).some(t => bookable(t).ok && availableCount(t) > 0)) {
+      return { ok: false, range: false, reason: 'No trips are available on ' + u.fmtDate(date) + ' (cancelled, closed or fully booked).', next: nextBookable(date) };
+    }
+    return { ok: true };
+  }
+
+  return { dayStatus, nextBookable, id, route, routeLabel, routeLongLabel, get, byId, forDate, addExtra, allSeats, seatMap, availableCount, sellableCount, departureDate, bookable };
 })();

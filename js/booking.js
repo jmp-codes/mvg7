@@ -183,19 +183,29 @@ window.G7 = window.G7 || {};
         </div>
       </div>`).join('');
 
+    const day = trips.dayStatus(S.date);
+    const dayMsg = day.ok ? '' : `<p class="msg err bk-daymsg">${esc(day.reason)}${day.next ? ` <button type="button" class="btn-outline" id="goto-next" data-date="${day.next}">Go to ${esc(u.fmtDate(day.next))}</button>` : ''}</p>`;
+
     el.innerHTML = `${head('ship', 'Choose your trip', 'Select your travel date and route, then add passengers.')}
       <label class="bk-field">Travel date
         <div class="bk-input">${icon('calendar')}<input type="date" id="b-date" value="${S.date}" min="${u.today()}" max="${maxDate}"></div>
       </label>
+      ${dayMsg}
       <h3 class="bk-sub">Route</h3>
       <div class="bk-routes">${routeCards}</div>
       <h3 class="bk-sub">Passengers <small>(max ${config.maxPassengersPerBooking})</small></h3>
       <div class="bk-counts">${counters}</div>
-      <div class="bk-actions"><span></span><button class="btn-navy lg" id="next">Choose seats ${icon('arrow')}</button></div>`;
+      <div class="bk-actions"><span></span><button class="btn-navy lg" id="next" ${day.ok ? '' : 'disabled aria-disabled="true"'}>Choose seats ${icon('arrow')}</button></div>`;
 
     $('#b-date', el).addEventListener('change', e => {
-      if (e.target.value) { S.date = e.target.value; S.tripId = ''; S.seats = []; draw(); }
+      const v = e.target.value;
+      const st = trips.dayStatus(v);
+      // typed a past date, a date beyond the booking window, or cleared the field: keep the previous date
+      if (!v || st.range) { u.toast(st.reason, 'err'); e.target.value = S.date; return; }
+      S.date = v; S.tripId = ''; S.seats = []; draw();
     });
+    const gn = $('#goto-next', el);
+    if (gn) gn.addEventListener('click', () => { S.date = gn.dataset.date; S.tripId = ''; S.seats = []; draw(); });
     $$('input[name=route]', el).forEach(r => r.addEventListener('change', e => { S.tripId = e.target.value; S.seats = []; draw(); }));
     $$('[data-inc]', el).forEach(b => b.addEventListener('click', () => {
       if (totalPax() >= config.maxPassengersPerBooking) return u.toast('Maximum ' + config.maxPassengersPerBooking + ' passengers per booking.', 'err');
@@ -206,7 +216,8 @@ window.G7 = window.G7 || {};
     $('#next', el).addEventListener('click', () => {
       const t = currentTrip();
       const ok = trips.bookable(t);
-      if (!S.date || S.date < u.today()) return u.toast('Please choose a valid date.', 'err');
+      const ds = trips.dayStatus(S.date);
+      if (!ds.ok) return u.toast(ds.reason, 'err');
       if (!ok.ok) return u.toast(ok.reason, 'err');
       if (totalPax() < 1) return u.toast('Add at least one passenger.', 'err');
       if (totalPax() > config.maxPassengersPerBooking) return u.toast('Maximum ' + config.maxPassengersPerBooking + ' passengers per booking.', 'err');
