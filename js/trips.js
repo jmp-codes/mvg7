@@ -103,28 +103,34 @@ G7.trips = (function () {
   // { ok:boolean, reason:string }
   function bookable(trip) {
     if (trip.cancelled) return { ok: false, reason: 'This trip has been cancelled.' };
+    if (!store.isOpenDate(trip.date)) return { ok: false, reason: 'Booking is not open for this date yet.' };
     const cutoff = departureDate(trip).getTime() - config.bookingCutoffMinutes * 60000;
     if (Date.now() > cutoff) return { ok: false, reason: 'Booking for this trip is closed.' };
     return { ok: true, reason: '' };
   }
 
   // Can a customer book anything on this date? { ok, reason, next? }  (next = the next date that has an open trip)
-  function nextBookable(from) {
+  function nextBookable(from, routeId, pax) {
     const u = G7.u, max = u.addDays(u.today(), config.advanceBookingDays);
     for (let i = 1; i <= config.advanceBookingDays; i++) {
       const d = u.addDays(from, i);
       if (d > max) break;
-      if (forDate(d).some(t => bookable(t).ok && availableCount(t) > 0)) return d;
+      if (forDate(d).some(t => (!routeId || t.routeId === routeId) && bookable(t).ok && availableCount(t) >= (pax || 1))) return d;
     }
     return '';
   }
-  function dayStatus(date) {
+  function trips_label(r) { return routeLabel(r); }
+  function dayStatus(date, routeId, pax) {
     const u = G7.u, today = u.today(), max = u.addDays(today, config.advanceBookingDays);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return { ok: false, range: true, reason: 'Please choose a travel date.' };
     if (date < today) return { ok: false, range: true, reason: 'That date has already passed. Please choose today or a later date.' };
     if (date > max) return { ok: false, range: true, reason: 'There are no trips on that date yet. Bookings are open up to ' + u.fmtDate(max) + '.' };
-    if (!forDate(date).some(t => bookable(t).ok && availableCount(t) > 0)) {
-      return { ok: false, range: false, reason: 'No trips are available on ' + u.fmtDate(date) + ' (cancelled, closed or fully booked).', next: nextBookable(date) };
+    if (!store.isOpenDate(date)) {
+      return { ok: false, range: false, reason: 'Booking is not open for ' + u.fmtDate(date) + ' yet. No trips are scheduled on that date.', next: nextBookable(date, routeId, pax) };
+    }
+    if (!forDate(date).some(t => (!routeId || t.routeId === routeId) && bookable(t).ok && availableCount(t) >= (pax || 1))) {
+      const rt = routeId && route(routeId);
+      return { ok: false, range: false, reason: 'No ' + (rt ? trips_label(rt) + ' ' : '') + 'trips are available on ' + u.fmtDate(date) + ' (cancelled, closed or fully booked).', next: nextBookable(date, routeId, pax) };
     }
     return { ok: true };
   }

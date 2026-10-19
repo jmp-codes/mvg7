@@ -125,8 +125,8 @@ G7.cloud = (function () {
     must(await sb.from('bookings').delete().neq('ref', ''));
     must(await sb.from('trip_overrides').delete().neq('trip_id', ''));
     must(await sb.from('extra_trips').delete().neq('id', ''));
-    must(await sb.from('settings').delete().in('key', ['farePrices', 'customFares', 'maintenance']));
-    ['bookings', 'trips', 'extraTrips', 'farePrices', 'customFares', 'maintenance'].forEach(k => delete C.kv[k]);
+    must(await sb.from('settings').delete().in('key', ['farePrices', 'customFares', 'maintenance', 'openDates']));
+    ['bookings', 'trips', 'extraTrips', 'farePrices', 'customFares', 'maintenance', 'openDates'].forEach(k => delete C.kv[k]);
     C.kv.bookings = []; C.kv.trips = {}; C.kv.extraTrips = [];
     snap.bk = {}; snap.tr = {}; snap.ex = {}; snap.st = {};
   }

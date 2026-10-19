@@ -66,6 +66,18 @@ G7.store = (function () {
   function maintenanceSeats() { const v = get('maintenance', null); return Array.isArray(v) ? v : G7.config.outOfService.slice(); }
   function setMaintenanceSeats(list) { set('maintenance', list); }
 
+  // ---- Dates open for booking. The office opens ranges of dates; nothing else can be booked. ----
+  // Default (nothing saved yet): today through the next 30 days.
+  function openRanges() {
+    const v = get('openDates', null);
+    if (Array.isArray(v)) return v.filter(r => r && r.from && r.to);
+    return [{ from: G7.u.today(), to: G7.u.addDays(G7.u.today(), 30) }];
+  }
+  function setOpenRanges(list) { set('openDates', list); }
+  function isOpenDate(date) {
+    return openRanges().some(r => date >= r.from && date <= r.to) || extraTrips().some(t => t.date === date);
+  }
+
   // ---- Extra trips added by the Ticket Office (beyond the default daily schedule) ----
   function extraTrips() { return get('extraTrips', []); }
   function addExtraTrip(t) { const l = extraTrips(); l.push(t); set('extraTrips', l); return t; }
@@ -125,12 +137,12 @@ G7.store = (function () {
 
   // ---- Maintenance --------------------------------------------------
   function exportAll() {
-    return { exportedAt: new Date().toISOString(), bookings: bookings(), trips: tripOverrides(), extraTrips: extraTrips(), customFares: customFares(), maintenance: maintenanceSeats(), farePrices: get('farePrices', {}), staff: staff().map(x => ({ id: x.id, name: x.name, role: x.role, active: x.active !== false })) };
+    return { exportedAt: new Date().toISOString(), bookings: bookings(), trips: tripOverrides(), extraTrips: extraTrips(), customFares: customFares(), maintenance: maintenanceSeats(), openDates: openRanges(), farePrices: get('farePrices', {}), staff: staff().map(x => ({ id: x.id, name: x.name, role: x.role, active: x.active !== false })) };
   }
   function resetAll() {
     if (cloud()) return G7.cloud.resetAll();
-    ['bookings', 'trips', 'extraTrips', 'farePrices', 'customFares', 'maintenance', 'receiptSeq'].forEach(k => localStorage.removeItem(PREFIX + k));
+    ['bookings', 'trips', 'extraTrips', 'farePrices', 'customFares', 'maintenance', 'openDates', 'receiptSeq'].forEach(k => localStorage.removeItem(PREFIX + k));
   }
 
-  return { takenSeats, staff, saveStaff, nextReceiptNo, bookings, saveBookings, getBooking, addBooking, updateBooking, tripOverride, tripOverrides, setTripOverride, maintenanceSeats, setMaintenanceSeats, extraTrips, addExtraTrip, removeExtraTrip, fares, fareOrder, customFares, saveCustomFares, setFarePrices, exportAll, resetAll };
+  return { takenSeats, staff, saveStaff, nextReceiptNo, bookings, saveBookings, getBooking, addBooking, updateBooking, tripOverride, tripOverrides, setTripOverride, maintenanceSeats, setMaintenanceSeats, openRanges, setOpenRanges, isOpenDate, extraTrips, addExtraTrip, removeExtraTrip, fares, fareOrder, customFares, saveCustomFares, setFarePrices, exportAll, resetAll };
 })();

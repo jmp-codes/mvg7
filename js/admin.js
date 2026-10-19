@@ -295,6 +295,37 @@ window.G7 = window.G7 || {};
     return list.sort((TSORT[F.tsort] || TSORT.asc)[0]);
   }
 
+  // Which dates customers can book. Anything outside these ranges is closed.
+  function openWindow(el) {
+    const box = $('#openwin', el);
+    const ranges = store.openRanges().slice().sort((a, b) => a.from.localeCompare(b.from));
+    box.innerHTML = `<div class="of-panel" style="margin-bottom:14px;padding:16px 18px">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between"><div><b>Dates open for booking</b>
+      <div class="of-hint" style="margin:2px 0 0">Customers can only book dates inside these ranges. The daily trips run on every open date.</div></div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin:12px 0">${ranges.length ? ranges.map((r, i) => `<span class="of-pill ok" style="padding:6px 10px">${u.fmtDate(r.from)} → ${u.fmtDate(r.to)} <button type="button" data-rm="${i}" aria-label="Close these dates" style="border:0;background:none;cursor:pointer;font-size:1.1em;margin-left:4px">×</button></span>`).join('') : '<span class="of-pill bad">No dates are open. Customers cannot book.</span>'}</div>
+      <form id="ow" style="display:flex;gap:10px;align-items:end;flex-wrap:wrap">
+        <label>From${dateInput('ow-f', u.today())}</label><label>To${dateInput('ow-t', u.addDays(u.today(), 30))}</label>
+        <button class="of-btn navy">${icon('plus')} Open these dates</button></form></div>`;
+    $$('[data-rm]', box).forEach(b => b.addEventListener('click', () => {
+      const r = ranges[Number(b.dataset.rm)];
+      if (!confirm('Close booking for ' + u.fmtDate(r.from) + ' to ' + u.fmtDate(r.to) + '? Existing bookings are not cancelled.')) return;
+      store.setOpenRanges(ranges.filter((x, i) => i !== Number(b.dataset.rm)));
+      u.toast('Dates closed.', 'ok'); openWindow(el);
+    }));
+    $('#ow', box).addEventListener('submit', e => {
+      e.preventDefault();
+      const f = $('#ow-f', box).value, t = $('#ow-t', box).value;
+      if (!f || !t) return u.toast('Choose both dates.', 'err');
+      if (t < f) return u.toast('The end date must be on or after the start date.', 'err');
+      if (t < u.today()) return u.toast('Those dates have already passed.', 'err');
+      // merge overlapping / adjacent ranges
+      const all = ranges.concat({ from: f, to: t }).sort((a, b) => a.from.localeCompare(b.from)), out = [];
+      all.forEach(r => { const l = out[out.length - 1]; if (l && r.from <= u.addDays(l.to, 1)) { if (r.to > l.to) l.to = r.to; } else out.push({ from: r.from, to: r.to }); });
+      store.setOpenRanges(out);
+      u.toast('Dates opened for booking.', 'ok'); openWindow(el);
+    });
+  }
+
   function tripsTab(el) {
     el.innerHTML = `${head('ship', 'Trips & Seats', 'View trips, check seat availability, and manage trip schedules.', `<button class="of-btn navy" id="addtrip">${icon('plus')} Add Trip</button>`)}
       <div class="of-filters">
@@ -304,6 +335,8 @@ window.G7 = window.G7 || {};
         <label class="grow">Search<div class="of-input">${icon('search')}<input id="tq" value="${esc(F.tq)}" placeholder="Search by vessel, route or trip ID..."></div></label>
         <button class="of-btn ghost" id="clr">${icon('filter')} Clear</button></div>
       <div class="of-panel" id="tl"></div>`;
+    $('.of-filters', el).insertAdjacentHTML('beforebegin', '<div id="openwin" style="margin-top:14px"></div>');
+    openWindow(el);
     $('#td', el).addEventListener('change', e => { F.tdate = e.target.value; F.tpage = 1; list(); });
     $('#tr', el).addEventListener('change', e => { F.troute = e.target.value; F.tpage = 1; list(); });
     $('#ts', el).addEventListener('change', e => { F.tstatus = e.target.value; F.tpage = 1; list(); });

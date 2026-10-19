@@ -83,10 +83,10 @@ create policy to_read  on public.trip_overrides for select to anon, authenticate
 create policy to_write on public.trip_overrides for all    to authenticated using (public.is_staff()) with check (public.is_staff());
 create policy et_read  on public.extra_trips    for select to anon, authenticated using (true);
 create policy et_write on public.extra_trips    for all    to authenticated using (public.is_staff()) with check (public.is_staff());
-create policy st_read  on public.settings for select to anon, authenticated using (key in ('farePrices','customFares','maintenance') or public.is_staff());
+create policy st_read  on public.settings for select to anon, authenticated using (key in ('farePrices','customFares','maintenance','openDates') or public.is_staff());
 create policy st_write on public.settings for all    to authenticated
-  using      (public.is_admin() or (public.is_staff() and key in ('maintenance','receiptSeq')))
-  with check (public.is_admin() or (public.is_staff() and key in ('maintenance','receiptSeq')));
+  using      (public.is_admin() or (public.is_staff() and key in ('maintenance','openDates','receiptSeq')))
+  with check (public.is_admin() or (public.is_staff() and key in ('maintenance','openDates','receiptSeq')));
 
 -- ---------- Customer functions (no sign-in needed) ----------
 -- Seats already taken on a date: seat numbers only, no names.
@@ -132,6 +132,12 @@ begin
   if v_ref !~ '^G7-[0-9]{6}-[A-Z0-9]{4}$' then raise exception 'Invalid reference'; end if;
   if v_trip is null or v_date is null then raise exception 'Missing trip'; end if;
   if (v_ov->>'cancelled')::boolean is true then raise exception 'This trip has been cancelled.'; end if;
+  if not exists (select 1 from extra_trips where trip_date = v_date) and not exists (
+       select 1 from jsonb_array_elements(coalesce((select value from settings where key = 'openDates'),
+              jsonb_build_array(jsonb_build_object('from', current_date::text, 'to', (current_date + 30)::text)))) r
+       where v_date between (r->>'from')::date and (r->>'to')::date) then
+    raise exception 'Booking is not open for this date yet.';
+  end if;
   if jsonb_array_length(p->'passengers') < 1 or jsonb_array_length(p->'passengers') > 10 then raise exception 'Invalid passenger count'; end if;
   if coalesce(p->'contact'->>'name','') = '' or coalesce(p->'contact'->>'phone','') = '' then raise exception 'Contact details required'; end if;
 
