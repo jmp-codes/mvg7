@@ -119,6 +119,36 @@ G7.trips = (function () {
     }
     return '';
   }
+  // Open booking ranges that are still ahead (clipped to today and the booking window)
+  function openRangesAhead() {
+    const u = G7.u, today = u.today(), max = u.addDays(today, config.advanceBookingDays);
+    const out = [];
+    store.openRanges().slice().sort((a, b) => a.from.localeCompare(b.from)).forEach(r => {
+      const f = r.from < today ? today : r.from, t = r.to > max ? max : r.to;
+      if (t >= f) out.push({ from: f, to: t });
+    });
+    return out;
+  }
+  function shortRange(r) {
+    const d = x => new Date(x + 'T00:00:00'), o = { month: 'short', day: 'numeric' };
+    const f = d(r.from), t = d(r.to), sameYear = f.getFullYear() === t.getFullYear();
+    const fs = f.toLocaleDateString('en-PH', sameYear ? o : Object.assign({ year: 'numeric' }, o));
+    const ts = t.toLocaleDateString('en-PH', Object.assign({ year: 'numeric' }, o));
+    return r.from === r.to ? ts : fs + ' \u2013 ' + ts;
+  }
+  // The next `n` open days with seats left on a route: [{date, left}]
+  function upcomingOpenDays(n, routeId) {
+    const u = G7.u, out = [], max = u.addDays(u.today(), config.advanceBookingDays);
+    for (let i = 0; i <= config.advanceBookingDays && out.length < n; i++) {
+      const d = u.addDays(u.today(), i);
+      if (d > max) break;
+      if (!store.isOpenDate(d)) continue;
+      const ts = forDate(d).filter(t => (!routeId || t.routeId === routeId) && bookable(t).ok);
+      if (!ts.length) continue;
+      out.push({ date: d, left: ts.reduce((a, t) => a + availableCount(t), 0) });
+    }
+    return out;
+  }
   function trips_label(r) { return routeLabel(r); }
   function dayStatus(date, routeId, pax) {
     const u = G7.u, today = u.today(), max = u.addDays(today, config.advanceBookingDays);
@@ -135,5 +165,5 @@ G7.trips = (function () {
     return { ok: true };
   }
 
-  return { dayStatus, nextBookable, id, route, routeLabel, routeLongLabel, get, byId, forDate, addExtra, allSeats, seatMap, availableCount, sellableCount, departureDate, bookable };
+  return { openRangesAhead, shortRange, upcomingOpenDays, dayStatus, nextBookable, id, route, routeLabel, routeLongLabel, get, byId, forDate, addExtra, allSeats, seatMap, availableCount, sellableCount, departureDate, bookable };
 })();

@@ -186,9 +186,18 @@ window.G7 = window.G7 || {};
     const day = trips.dayStatus(S.date);
     const dayMsg = day.ok ? '' : `<p class="msg err bk-daymsg">${esc(day.reason)}${day.next ? ` <button type="button" class="btn-outline" id="goto-next" data-date="${day.next}">Go to ${esc(u.fmtDate(day.next))}</button>` : ''}</p>`;
 
+    const rangesAhead = trips.openRangesAhead();
+    const openNote = rangesAhead.length ? 'Booking is open: ' + rangesAhead.map(trips.shortRange).join(' · ') : 'Booking is not open yet. Please check back soon.';
+    const soon = trips.upcomingOpenDays(10, cur.routeId);
+    const chips = soon.length ? `<div class="bk-soon"><h3 class="bk-sub">Available dates <small>${esc(trips.routeLabel(cur.route))}</small></h3>
+      <div class="bk-chips" role="list">${soon.map(x => { const dd = new Date(x.date + 'T00:00:00'); return `<button type="button" role="listitem" class="bk-chip ${x.date === S.date ? 'on' : ''} ${x.left ? '' : 'full'}" data-d="${x.date}" ${x.left ? '' : 'disabled'}>
+        <small>${dd.toLocaleDateString('en-PH', { weekday: 'short' })}</small><b>${dd.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</b><em>${x.left ? x.left + ' seats' : 'Full'}</em></button>`; }).join('')}</div></div>` : '';
+
     el.innerHTML = `${head('ship', 'Choose your trip', 'Select your travel date and route, then add passengers.')}
+      ${chips}
       <label class="bk-field">Travel date
         <div class="bk-input">${icon('calendar')}<input type="date" id="b-date" value="${S.date}" min="${u.today()}" max="${maxDate}"></div>
+        <small class="bk-opennote">${esc(openNote)}</small>
       </label>
       ${dayMsg}
       <h3 class="bk-sub">Route</h3>
@@ -204,6 +213,7 @@ window.G7 = window.G7 || {};
       if (!v || st.range) { u.toast(st.reason, 'err'); e.target.value = S.date; return; }
       S.date = v; S.tripId = ''; S.seats = []; draw();
     });
+    $$('.bk-chip', el).forEach(c => c.addEventListener('click', () => { S.date = c.dataset.d; S.tripId = ''; S.seats = []; draw(); }));
     const gn = $('#goto-next', el);
     if (gn) gn.addEventListener('click', () => { S.date = gn.dataset.date; S.tripId = ''; S.seats = []; draw(); });
     $$('input[name=route]', el).forEach(r => r.addEventListener('change', e => { S.tripId = e.target.value; S.seats = []; draw(); }));

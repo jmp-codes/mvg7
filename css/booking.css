@@ -162,3 +162,16 @@ body.is-book { background: linear-gradient(180deg, #e9f2fb 0, #f4f8fc 320px, #f4
 .bk-daymsg { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin: .2rem 0 .8rem; }
 .bk-daymsg .btn-outline { padding: .35rem .8rem; }
 #next[disabled] { opacity: .5; cursor: not-allowed; }
+
+/* ---- available dates ---- */
+.bk-soon { margin-bottom: 1rem; }
+.bk-soon .bk-sub small { font-weight: 400; color: #5a6b84; margin-left: .4rem; }
+.bk-chips { display: flex; gap: .5rem; overflow-x: auto; padding: 2px 2px .5rem; scroll-snap-type: x proximity; }
+.bk-chip { flex: none; scroll-snap-align: start; display: grid; justify-items: center; gap: 1px; min-width: 76px; padding: .55rem .6rem; border: 1px solid #cfdcee; border-radius: 12px; background: #fff; color: #0a2f6b; cursor: pointer; font: inherit; }
+.bk-chip small { font-size: .72rem; color: #5a6b84; } .bk-chip b { font-size: .95rem; } .bk-chip em { font-style: normal; font-size: .72rem; color: #1c8a54; font-weight: 700; }
+.bk-chip:hover { border-color: #0a2f6b; }
+.bk-chip.on { background: #0a2f6b; border-color: #0a2f6b; color: #fff; } .bk-chip.on small, .bk-chip.on em { color: #cfe0f7; }
+.bk-chip.full { opacity: .5; cursor: not-allowed; } .bk-chip.full em { color: #b3261e; }
+.bk-opennote { display: block; margin-top: .35rem; color: #5a6b84; font-size: .82rem; font-weight: 400; }
+.bk-main, .bk-soon { min-width: 0; }
+.bk-chips { max-width: 100%; }

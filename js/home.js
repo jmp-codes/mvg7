@@ -160,7 +160,10 @@ window.G7 = window.G7 || {};
         <label class="fld"><span>Mobile number</span><div class="inp">${icon('user')}<input id="c-phone" inputmode="tel" required></div></label>
         <button class="btn-navy lg">Find Booking ${icon('arrow')}</button>
       </form>
+      <p class="open-note" id="open-note">${openLine()}</p>
     </section>
+
+    ${openSection()}
 
     <section class="features">
       <div class="feat">${icon('ticket', 'big')}<div><h3>Easy Online Booking</h3><p>Book your tickets anytime, anywhere in just a few clicks.</p></div></div>
@@ -236,6 +239,24 @@ window.G7 = window.G7 || {};
     </footer>`;
   }
 
+  function openLine() {
+    const r = trips.openRangesAhead();
+    return r.length ? icon('calendar') + ' Booking is open: ' + r.map(trips.shortRange).join(' \u00b7 ') : icon('calendar') + ' Booking is not open yet. Please check back soon.';
+  }
+  // "Booking is open" card: open date ranges, the daily trips, and the next few days
+  function openSection() {
+    const ranges = trips.openRangesAhead();
+    const soon = trips.upcomingOpenDays(7, '');
+    if (!ranges.length) return `<section class="open-card"><div class="open-in"><div><p class="eyebrow">TRAVEL DATES</p><h2>Booking is not open yet</h2><p>New travel dates will be announced here. Please check back soon.</p></div></div></section>`;
+    return `<section class="open-card" id="open"><div class="open-in">
+      <div class="open-l"><p class="eyebrow">TRAVEL DATES</p><h2>Booking is open</h2>
+        <ul class="open-ranges">${ranges.map(r => `<li>${icon('calendar')}${esc(trips.shortRange(r))}</li>`).join('')}</ul>
+        <ul class="open-trips">${config.routes.map(r => `<li>${icon('clock')}<span>${esc(trips.routeLabel(r))}<small>Departs ${u.fmtTime(r.departs)} daily</small></span></li>`).join('')}</ul>
+        <p class="open-sub">Schedules may vary by day and weather.</p></div>
+      <div class="open-r"><h3>Next available days</h3><div class="open-days">${soon.map(x => { const d = new Date(x.date + 'T00:00:00'); return `<a href="#/book" data-pick="${x.date}"><small>${d.toLocaleDateString('en-PH', { weekday: 'short' })}</small><b>${d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}</b><em>${x.left ? 'Book' : 'Full'}</em></a>`; }).join('')}</div>
+        <a class="btn-navy" href="#/book">Book a ticket ${icon('arrow')}</a></div></div></section>`;
+  }
+
   function render(root) {
     root.innerHTML = html();
 
@@ -277,6 +298,8 @@ window.G7 = window.G7 || {};
       if (!b) return u.toast('No booking found with those details.', 'err');
       ticket.show(b);
     });
+
+    $$('[data-pick]', root).forEach(a => a.addEventListener('click', () => G7.booking.prefill({ date: a.dataset.pick })));
 
     // Footer legal links open the text from config.legal in a popup
     $$('[data-legal]', root).forEach(btn => btn.addEventListener('click', () => {
